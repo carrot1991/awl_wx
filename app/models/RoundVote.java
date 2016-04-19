@@ -1,0 +1,26 @@
+package models;
+
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
+
+/**
+ * 
+ * @Description:回合的投票环节
+ * @Author: huchao 295971796@qq.com
+ * @CreateDate: 2016年4月19日
+ */
+@Entity
+public class RoundVote extends BaseModel {
+
+	@ManyToOne
+	public Round round;
+
+	public int index;// 本回合的投票index
+
+	public Boolean isSuccess;// 投票是否成功
+
+	public int approveNum;// 赞成的人数
+
+	public int opposeNum;// 反对的人数
+
+}
