@@ -28,8 +28,12 @@ public class Application extends BaseController {
 			String nonce = request.params.get("nonce");
 			// 随机字符串
 			String echostr = request.params.get("echostr");
+			Logger.info("wx url get: signature:%s,timestamp:%s,nonce:%s,echostr:%s", signature, timestamp, nonce,
+					echostr);
 			response.setContentTypeIfNotSet("text/html");
-			if (SignUtil.checkSignature(WxUtils.wxToken, signature, timestamp, nonce)) {
+			boolean checkResult = SignUtil.checkSignature(WxUtils.wxToken, signature, timestamp, nonce);
+			Logger.info("wx url checkResult:%s", checkResult);
+			if (checkResult) {
 				try {
 					PrintWriter writer = new PrintWriter(response.out);
 					writer.print(echostr);
