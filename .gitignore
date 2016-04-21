@@ -2,8 +2,6 @@ public/uploadAvatars
 public/uploadCourseLogos
 server.pid
 
-eclipse/*
-
 # IDE and editors
 *~
 .idea
@@ -12,7 +10,6 @@ eclipse
 .amateras
 .settings
 .classpath
-.class
 .project
 *.iml
 *.ipr
@@ -60,3 +57,10 @@ testrunner/*
 # built android application files
 *.apk
 *.ap_
+/public/download
+/precompiled
+*.tmp
+public/backstage/data/
+
+#document import file
+document/*
