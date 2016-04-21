@@ -16,7 +16,7 @@ public class Application extends BaseController {
 
 	public static void wx() {
 		// 调用核心业务类接收消息、处理消息
-		Logger.warn("wx url");
+		Logger.info("wx url");
 		String method = Request.current().method;
 		if (method.equals("POST")) {
 			String respMessage = GameCoreService.process(Request.current());
@@ -29,11 +29,11 @@ public class Application extends BaseController {
 			String nonce = request.params.get("nonce");
 			// 随机字符串
 			String echostr = request.params.get("echostr");
-			Logger.warn("wx url get: signature:%s,timestamp:%s,nonce:%s,echostr:%s,token:%s", signature, timestamp,
+			Logger.info("wx url get: signature:%s,timestamp:%s,nonce:%s,echostr:%s,token:%s", signature, timestamp,
 					nonce, echostr, WxUtils.wxToken);
 			response.setContentTypeIfNotSet("text/html");
 			boolean checkResult = SignUtil.checkSignature(WxUtils.wxToken, signature, timestamp, nonce);
-			Logger.warn("wx url checkResult:%s", checkResult);
+			Logger.info("wx url checkResult:%s", checkResult);
 			if (checkResult) {
 				try {
 					PrintWriter writer = new PrintWriter(response.out);

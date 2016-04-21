@@ -55,7 +55,7 @@ public class GameCoreService {
 		}
 
 		respMessage = MessageUtil.textMessageToXml(textMessage);
-		Logger.warn("respMessage: %s", respMessage);
+		Logger.info("respMessage: %s", respMessage);
 		return respMessage;
 	}
 }
