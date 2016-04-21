@@ -3,6 +3,7 @@ package services;
 import java.util.Date;
 import java.util.Map;
 
+import models.Player;
 import play.Logger;
 import play.mvc.Http.Request;
 import utils.wx.MessageUtil;
@@ -13,6 +14,8 @@ import utils.wx.TextMessage;
  * 
  */
 public class GameCoreService {
+
+	private static final String CACHE_KEY_PLAYER = "/player/";
 
 	/**
 	 * 处理微信发来的请求
@@ -47,7 +50,26 @@ public class GameCoreService {
 			if (msgType.equals(MessageUtil.REQ_MESSAGE_TYPE_TEXT)) {
 				// 获取发来的消息
 				String content = requestMap.get("Content");
-				textMessage.setContent("您输入了文本消息：" + content);
+				Player player = Player.getByOpenId(fromUserName);
+
+				// 设置游戏昵称
+				if (content.startsWith("name")) {
+					String name = content.substring(4);
+					if (player == null)
+						player = new Player();
+					player.name = name;
+					player.openId = fromUserName;
+					player.save();
+					textMessage.setContent(player.name + "，昵称设置成功!");
+					return MessageUtil.textMessageToXml(textMessage);
+				}
+
+				if (player == null) {
+					textMessage.setContent("请先设置游戏昵称，请回复[name您的名字]取名（所有指令均无中括号） ");
+				} else {
+					textMessage.setContent("您是" + player.name + ",您输入了文本消息：" + content);
+				}
+
 			}
 		} catch (Exception e) {
 			Logger.error("processRequest error:%s", e);
