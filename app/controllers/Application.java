@@ -1,5 +1,7 @@
 package controllers;
 
+import java.io.PrintWriter;
+
 import play.Logger;
 import play.mvc.Http.Request;
 import services.GameCoreService;
@@ -14,7 +16,6 @@ public class Application extends BaseController {
 
 	public static void wx() {
 		// 调用核心业务类接收消息、处理消息
-		Logger.info("wx post");
 		String method = Request.current().method;
 		if (method.equals("POST")) {
 			String respMessage = GameCoreService.process(Request.current());
@@ -29,7 +30,14 @@ public class Application extends BaseController {
 			String echostr = request.params.get("echostr");
 			response.setContentTypeIfNotSet("text/html");
 			if (SignUtil.checkSignature(WxUtils.wxToken, signature, timestamp, nonce)) {
-				renderText(echostr);
+				try {
+					PrintWriter writer = new PrintWriter(response.out);
+					writer.print(echostr);
+					writer.close();
+					writer = null;
+				} catch (Exception e) {
+					Logger.error(e.getMessage());
+				}
 			}
 		}
 	}
