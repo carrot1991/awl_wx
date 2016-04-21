@@ -15,7 +15,7 @@ public class RoundVote extends BaseModel {
 	@ManyToOne
 	public Round round;
 
-	public int index;// 本回合的投票index
+	public int voteIndex;// 本回合的投票index
 
 	public boolean isSuccess;// 投票是否成功
 

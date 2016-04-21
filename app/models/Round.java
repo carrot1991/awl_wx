@@ -9,7 +9,7 @@ public class Round extends BaseModel {
 	@ManyToOne
 	public Game game;
 
-	public int index;// 回合顺序 1,2,3,4,5
+	public int roundIndex;// 回合顺序 1,2,3,4,5
 
 	public Boolean isSuccess;// 回合是否成功 failedNum ==0时，isSuccess为true
 
