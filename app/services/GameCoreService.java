@@ -22,6 +22,8 @@ public class GameCoreService {
 	 */
 	public static String process(Request request) {
 		String respMessage = null;
+		// 回复文本消息
+		TextMessage textMessage = new TextMessage();
 		try {
 			// xml请求解析
 			Map<String, String> requestMap = MessageUtil.parseXml(request);
@@ -33,8 +35,8 @@ public class GameCoreService {
 			// 消息类型
 			String msgType = requestMap.get("MsgType");
 
-			// 回复文本消息
-			TextMessage textMessage = new TextMessage();
+			Logger.info("wx process fromUserName:%s,toUserName:%s,msgType:%s", fromUserName, toUserName, msgType);
+
 			textMessage.setToUserName(fromUserName);
 			textMessage.setFromUserName(toUserName);
 			textMessage.setCreateTime(new Date().getTime());
@@ -43,16 +45,16 @@ public class GameCoreService {
 
 			// 文本消息
 			if (msgType.equals(MessageUtil.REQ_MESSAGE_TYPE_TEXT)) {
-
+				// 获取发来的消息
+				String content = requestMap.get("Content");
+				textMessage.setContent("您输入了文本消息：" + content);
 			}
-
-			respMessage = MessageUtil.textMessageToXml(textMessage);
-
 		} catch (Exception e) {
 			Logger.error("processRequest error:%s", e);
-			e.printStackTrace();
+			textMessage.setContent("服务器异常:" + e.getMessage());
 		}
 
+		respMessage = MessageUtil.textMessageToXml(textMessage);
 		Logger.warn("respMessage: %s", respMessage);
 		return respMessage;
 	}
