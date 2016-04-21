@@ -1,5 +1,7 @@
 package models;
 
+import java.util.List;
+
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -13,6 +15,8 @@ public class PlayersInGame extends BaseModel {
 
 	@ManyToOne
 	public Player player;
+
+	public int playerIndex;
 
 	@Enumerated(EnumType.STRING)
 	public Role role;
@@ -32,6 +36,23 @@ public class PlayersInGame extends BaseModel {
 				res = true;
 			return res;
 		}
+	}
+
+	public static PlayersInGame joinInGame(Player player, Game game) {
+		Long count = PlayersInGame.count("game = ?", game);
+		if (count >= game.playerNum)
+			return null;
+
+		PlayersInGame pig = new PlayersInGame();
+		pig.game = game;
+		pig.player = player;
+		pig.playerIndex = count.intValue() + 1;
+
+		return pig.save();
+	}
+
+	public static List<PlayersInGame> listByGame(Game game) {
+		return PlayersInGame.find("game = ?", game).fetch();
 	}
 
 }

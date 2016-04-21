@@ -17,7 +17,7 @@ public class Game extends BaseModel {
 
 	public int roundIndex;
 
-	public String roomNum;// 游戏时的房间号，可能重合
+	public String roomNO;// 游戏时的房间号，可能重合
 
 	@Enumerated(EnumType.STRING)
 	public GameStatus status;// 游戏状态
@@ -30,6 +30,20 @@ public class Game extends BaseModel {
 		private GameStatus(String value) {
 			this.value = value;
 		}
+	}
+
+	public static Game init(int playerNum, String roomNO) {
+		Game game = new Game();
+		game.playerNum = playerNum;
+		game.roomNO = roomNO;
+		game.roundIndex = 0;
+		game.status = GameStatus.未开始;
+		return game.save();
+	}
+
+	public void exit() {
+		status = GameStatus.已结束;
+		return this.save();
 	}
 
 }
