@@ -78,6 +78,8 @@ public class GameCoreService {
 					return MessageUtil.textMessageToXml(textMessage);
 				}
 
+				textMessage.setContent("正在测试；" + player.name + ",您输入的是" + content);
+
 				String currentGameRoomNo = (String) Cache.get(CACHE_KEY_PLAYER + fromUserName);
 				Game currentGame = currentGameRoomNo != null ? (Game) Cache.get(CACHE_KEY_GAME + currentGameRoomNo)
 						: null;
