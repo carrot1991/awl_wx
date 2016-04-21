@@ -12,6 +12,6 @@ public class Vote extends BaseModel {
 	@ManyToOne
 	public Round round;
 
-	public Boolean isApprove;
+	public boolean isApprove;
 
 }

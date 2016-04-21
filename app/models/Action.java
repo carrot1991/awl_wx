@@ -18,6 +18,6 @@ public class Action extends BaseModel {
 	@ManyToOne
 	public Player player;
 
-	public Boolean isSuccess; // 是否成功执行
+	public boolean isSuccess; // 是否成功执行
 
 }

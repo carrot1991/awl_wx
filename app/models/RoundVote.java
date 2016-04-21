@@ -17,7 +17,7 @@ public class RoundVote extends BaseModel {
 
 	public int index;// 本回合的投票index
 
-	public Boolean isSuccess;// 投票是否成功
+	public boolean isSuccess;// 投票是否成功
 
 	public int approveNum;// 赞成的人数
 
