@@ -41,9 +41,10 @@ public class Game extends BaseModel {
 		return game.save();
 	}
 
-	public void exit() {
-		status = GameStatus.已结束;
-		this.save();
+	public static Game exit(Long id) {
+		Game game = Game.findById(id);
+		game.status = GameStatus.已结束;
+		return game.save();
 	}
 
 }

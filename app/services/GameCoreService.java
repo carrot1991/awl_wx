@@ -92,7 +92,7 @@ public class GameCoreService {
 						Cache.safeDelete(CACHE_KEY_GAME + currentGameRoomNo);
 						PlayersInGame.listByGame(currentGame)
 								.forEach(row -> Cache.safeDelete(CACHE_KEY_PLAYER + row.player.openId));
-						currentGame.exit();
+						Game.exit(currentGame.id);
 						textMessage.setContent("已退出房间" + currentGame.roomNO + ",请先通知其他玩家");
 						return MessageUtil.textMessageToXml(textMessage);
 					}
@@ -125,7 +125,7 @@ public class GameCoreService {
 						}
 
 					} else {
-						textMessage.setContent("您已经在房间 " + currentGameRoomNo + "内了");
+						textMessage.setContent("您已经在房间：" + currentGameRoomNo + "内了");
 						return MessageUtil.textMessageToXml(textMessage);
 					}
 				}
