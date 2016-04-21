@@ -28,7 +28,7 @@ public class WxUtils {
 	// Play.configuration.getProperty("wxAppSecret");
 	// public static final String wxAppId =
 	// Play.configuration.getProperty("wxAppId");
-
+	public static final String wxToken = "carrot";
 	public static final String wxAppSecret = "956a98e4761a46c7cd3b0ec4574badee ";
 	public static final String wxAppId = "wx4a8a04d8658cfae9";
 
