@@ -78,12 +78,14 @@ public class GameCoreService {
 					return MessageUtil.textMessageToXml(textMessage);
 				}
 
-				textMessage.setContent("正在测试；" + player.name + ",您输入的是" + content);
+				textMessage.setContent("正在测试，" + player.name + "，您输入的是" + content);
 
+				// 获取当前游戏房间的房间号和Game数据对象
 				String currentGameRoomNo = (String) Cache.get(CACHE_KEY_PLAYER + fromUserName);
 				Game currentGame = currentGameRoomNo != null ? (Game) Cache.get(CACHE_KEY_GAME + currentGameRoomNo)
 						: null;
 
+				// 退出房间
 				if (EXIT_STR.equals(content)) {
 					if (currentGameRoomNo == null) {
 						textMessage.setContent("你又没在房间，退个奶子啊！");
@@ -93,11 +95,12 @@ public class GameCoreService {
 						PlayersInGame.listByGame(currentGame)
 								.forEach(row -> Cache.safeDelete(CACHE_KEY_PLAYER + row.player.openId));
 						Game.exit(currentGame.id);
-						textMessage.setContent("已退出房间" + currentGame.roomNO + ",请先通知其他玩家");
+						textMessage.setContent("已退出房间" + currentGame.roomNO + "，请先通知其他玩家");
 						return MessageUtil.textMessageToXml(textMessage);
 					}
 				}
 
+				// 创建房间
 				if (StringUtils.isNumeric(content) && Integer.parseInt(content) >= 5
 						&& Integer.parseInt(content) <= 10) {
 					if (currentGameRoomNo == null) {
@@ -116,16 +119,15 @@ public class GameCoreService {
 						Cache.add(CACHE_KEY_GAME + game.roomNO, game);
 						PlayersInGame pig = PlayersInGame.joinInGame(player, game);
 						if (pig == null) {
-							textMessage.setContent("房间" + roomNO + "创建成功,但是你加入房间失败");
+							textMessage.setContent("房间" + roomNO + "创建成功，但是你加入房间失败");
 							return MessageUtil.textMessageToXml(textMessage);
 						} else {
 							textMessage.setContent(
 									"游戏房间号：" + roomNO + "\n游戏人数：" + playerNum + "\n你是：" + pig.playerIndex + "号");
 							return MessageUtil.textMessageToXml(textMessage);
 						}
-
 					} else {
-						textMessage.setContent("您已经在房间：" + currentGameRoomNo + "内了");
+						textMessage.setContent("您已经在房间" + currentGameRoomNo + "内了");
 						return MessageUtil.textMessageToXml(textMessage);
 					}
 				}
