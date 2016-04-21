@@ -21,10 +21,10 @@ import utils.wx.TextMessage;
  */
 public class GameCoreService {
 
-	private static final String CACHE_KEY_PLAYER = "/player/";
-	private static final String CACHE_KEY_GAME = "/game/";
-	private static final String EXIT_STR = "退出";
-	private static final String MEMBER_STR = "成员";
+	public static final String CACHE_KEY_PLAYER = "/player/";
+	public static final String CACHE_KEY_GAME = "/game/";
+	public static final String EXIT_STR = "退出";
+	public static final String MEMBER_STR = "成员";
 
 	/**
 	 * 处理微信发来的请求
@@ -113,7 +113,7 @@ public class GameCoreService {
 							return MessageUtil.textMessageToXml(textMessage);
 						}
 
-						Cache.add(CACHE_KEY_GAME + roomNO, game);
+						Cache.add(CACHE_KEY_GAME + game.roomNO, game);
 						PlayersInGame pig = PlayersInGame.joinInGame(player, game);
 						if (pig == null) {
 							textMessage.setContent("房间" + roomNO + "创建成功,但是你加入房间失败");

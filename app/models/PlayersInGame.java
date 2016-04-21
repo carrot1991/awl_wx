@@ -7,6 +7,9 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.ManyToOne;
 
+import play.cache.Cache;
+import services.GameCoreService;
+
 @Entity
 public class PlayersInGame extends BaseModel {
 
@@ -48,7 +51,12 @@ public class PlayersInGame extends BaseModel {
 		pig.player = player;
 		pig.playerIndex = count.intValue() + 1;
 
-		return pig.save();
+		pig = pig.save();
+
+		if (pig != null) {
+			Cache.add(GameCoreService.CACHE_KEY_PLAYER + player.openId, game.roomNO);
+		}
+		return pig;
 	}
 
 	public static List<PlayersInGame> listByGame(Game game) {
