@@ -43,7 +43,7 @@ public class Game extends BaseModel {
 
 	public void exit() {
 		status = GameStatus.已结束;
-		return this.save();
+		this.save();
 	}
 
 }
