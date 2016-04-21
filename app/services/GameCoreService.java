@@ -99,7 +99,7 @@ public class GameCoreService {
 				}
 
 				if (StringUtils.isNumeric(content) && Integer.parseInt(content) >= 5
-						&& Integer.parseInt(content) >= 10) {
+						&& Integer.parseInt(content) <= 10) {
 					if (currentGameRoomNo == null) {
 						int playerNum = Integer.parseInt(content);
 						String roomNO = getCode();
@@ -150,9 +150,4 @@ public class GameCoreService {
 		return code;
 	}
 
-	public static void main(String[] args) {
-		Object obj = null;
-		Game game = (Game) obj;
-		System.out.println(game);
-	}
 }
