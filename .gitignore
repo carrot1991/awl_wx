@@ -1,0 +1,62 @@
+public/uploadAvatars
+public/uploadCourseLogos
+server.pid
+
+eclipse/*
+
+# IDE and editors
+*~
+.idea
+nbproject
+eclipse
+.amateras
+.settings
+.classpath
+.class
+.project
+*.iml
+*.ipr
+*.iws
+.pydevproject
+.metadata
+.DS_Store
+*.orig
+
+# play created logs and test results
+tmp
+test-result
+logs/*
+log/*
+log
+logs
+public/files
+
+# japid created java files
+conf/japid*
+app/japidviews/*/*.java
+app/japidviews/*/*/*.java
+app/japidviews/*/*/*/*.java
+!app/japidviews/_javatags/*.java
+logs/*
+
+# everyone should keep their own conf files
+conf/application.conf
+cobertura.*
+commit.txt
+bin
+bin/*
+#test java, id:coolgo
+public/testrunner/*
+public/uploadAvatars
+public/uploadCourseLogos
+cobertura-2.4/*
+cobertura.ser
+conf/cobertura-2.4/*
+testrunner/*
+/.pmd
+.externalToolBuilders/ch.acanda.eclipse.pmd.builder.PMDBuilder.launch
+/.externalToolBuilders
+
+# built android application files
+*.apk
+*.ap_
