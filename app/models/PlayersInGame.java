@@ -50,17 +50,26 @@ public class PlayersInGame extends BaseModel {
 		pig.game = game;
 		pig.player = player;
 		pig.playerIndex = count.intValue() + 1;
-
 		pig = pig.save();
 
-		if (pig != null) {
+		if (pig != null)
 			Cache.add(GameCoreService.CACHE_KEY_PLAYER + player.openId, game.roomNO);
-		}
+
 		return pig;
 	}
 
 	public static List<PlayersInGame> listByGame(Game game) {
-		return PlayersInGame.find("game = ?", game).fetch();
+		return PlayersInGame.find("game = ? order by playerIndex asc", game).fetch();
+	}
+
+	public static int countByGame(Game game) {
+		Long count = PlayersInGame.count("game = ?", game);
+		return count.intValue();
+	}
+
+	public void updateRole(Role role) {
+		this.role = role;
+		this.save();
 	}
 
 }

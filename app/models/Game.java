@@ -4,6 +4,9 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 
+import play.cache.Cache;
+import services.GameCoreService;
+
 /**
  * 
  * @Description:一局游戏
@@ -23,7 +26,7 @@ public class Game extends BaseModel {
 	public GameStatus status;// 游戏状态
 
 	public enum GameStatus {
-		未开始("0"), 进行中("1"), 已结束("2");
+		未开始("0"), 进行中("1"), 已结束("2"), 已终止("3");
 
 		public String value;
 
@@ -38,12 +41,22 @@ public class Game extends BaseModel {
 		game.roomNO = roomNO;
 		game.roundIndex = 0;
 		game.status = GameStatus.未开始;
-		return game.save();
+		game = game.save();
+		if (game != null)
+			Cache.add(GameCoreService.CACHE_KEY_GAME + roomNO, game);
+		return game;
 	}
 
 	public static Game exit(Long id) {
 		Game game = Game.findById(id);
-		game.status = GameStatus.已结束;
+		game.status = GameStatus.已终止;
+		return game.save();
+	}
+
+	public static Game start(Long id) {
+		Game game = Game.findById(id);
+		game.status = GameStatus.进行中;
+		game.roundIndex = 1;
 		return game.save();
 	}
 
