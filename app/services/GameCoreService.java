@@ -33,10 +33,11 @@ public class GameCoreService {
 	public static final String MEMBER_STR = "成员";
 
 	/**
-	 * 处理微信发来的请求
 	 * 
-	 * @param request
-	 * @return
+	 * @Description:游戏核心逻辑代码
+	 * @Author: huchao 295971796@qq.com
+	 * @CreateDate: 2016年4月22日
+	 * @return String 返回类型
 	 */
 	public static String process(Request request) {
 		String respMessage = null;
@@ -117,9 +118,9 @@ public class GameCoreService {
 						&& Integer.parseInt(content) <= 10) {
 					if (currentGameRoomNO == null) {
 						int playerNum = Integer.parseInt(content);
-						String roomNO = getCode();
+						String roomNO = getRoomNO();
 						while (Cache.get(CACHE_KEY_GAME + roomNO) != null) {
-							roomNO = getCode();
+							roomNO = getRoomNO();
 						}
 
 						Game game = Game.init(playerNum, roomNO);
@@ -174,7 +175,6 @@ public class GameCoreService {
 							textMessage.setContent("加入房间失败，请重试");
 							return MessageUtil.textMessageToXml(textMessage);
 						} else {
-
 							playersNum = PlayersInGame.countByGame(currentGame);
 
 							// 人满开车！！！！！
@@ -275,7 +275,14 @@ public class GameCoreService {
 		return respMessage;
 	}
 
-	private static String getCode() {
+	/**
+	 * 
+	 * @Description:随机生成四位房间房间号
+	 * @Author: huchao 295971796@qq.com
+	 * @CreateDate: 2016年4月22日
+	 * @return String 返回类型
+	 */
+	private static String getRoomNO() {
 		String code = "";
 		Random random = new Random();
 		for (int i = 0; i < 4; i++) {
@@ -284,6 +291,13 @@ public class GameCoreService {
 		return code;
 	}
 
+	/**
+	 * 
+	 * @Description: 房间成员信息
+	 * @Author: huchao 295971796@qq.com
+	 * @CreateDate: 2016年4月22日
+	 * @return String 返回类型
+	 */
 	private static String memberInfo(List<PlayersInGame> pigs) {
 		StringBuffer memberInfo = new StringBuffer("本房间内成员名单如下：\n");
 
@@ -292,6 +306,13 @@ public class GameCoreService {
 		return memberInfo.toString();
 	}
 
+	/**
+	 * 
+	 * @Description:配置信息
+	 * @Author: huchao 295971796@qq.com
+	 * @CreateDate: 2016年4月22日
+	 * @return String 返回类型
+	 */
 	private static String configureInfo(List<PlayersInGame> pigs) {
 		String configure = "\n房间的配置   ";
 		if (pigs.size() == 5)
@@ -309,6 +330,13 @@ public class GameCoreService {
 		return configure;
 	}
 
+	/**
+	 * 
+	 * @Description:身份信息
+	 * @Author: huchao 295971796@qq.com
+	 * @CreateDate: 2016年4月22日
+	 * @return String 返回类型
+	 */
 	private static String identityInfo(List<PlayersInGame> pigs, PlayersInGame pig) {
 		StringBuffer identityInfo = new StringBuffer();
 
