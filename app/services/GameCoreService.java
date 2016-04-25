@@ -14,6 +14,7 @@ import models.Game.GameStatus;
 import models.Player;
 import models.PlayersInGame;
 import models.PlayersInGame.Role;
+import models.Round;
 import play.Logger;
 import play.cache.Cache;
 import play.mvc.Http.Request;
@@ -99,9 +100,7 @@ public class GameCoreService {
 						return MessageUtil.textMessageToXml(textMessage);
 					}
 
-					if (Game.exit(currentGame.id) != null) {
-						// db操作成功后 清除cache数据
-						Cache.safeDelete(GameCoreService.CACHE_KEY_GAME + currentGameRoomNO);
+					if (Game.exit(currentGame) != null) {
 						PlayersInGame.listByGame(currentGame)
 								.forEach(row -> Cache.safeDelete(GameCoreService.CACHE_KEY_PLAYER + row.player.openId));
 						textMessage.setContent("已退出房间" + currentGame.roomNO + "，请先通知其他玩家");
@@ -129,7 +128,13 @@ public class GameCoreService {
 							return MessageUtil.textMessageToXml(textMessage);
 						}
 
-						Cache.add(CACHE_KEY_GAME + game.roomNO, game);
+						List<Round> rounds = Round.init(game);
+						if (rounds == null || rounds.size() != 5) {
+							Game.exit(game);
+							textMessage.setContent("房间创建失败，请重试");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+
 						PlayersInGame pig = PlayersInGame.joinInGame(player, game);
 						if (pig == null) {
 							textMessage.setContent("房间" + roomNO + "创建成功，但是你加入房间失败");

@@ -44,13 +44,17 @@ public class Game extends BaseModel {
 		game = game.save();
 		if (game != null)
 			Cache.add(GameCoreService.CACHE_KEY_GAME + roomNO, game);
+
 		return game;
 	}
 
-	public static Game exit(Long id) {
-		Game game = Game.findById(id);
+	public static Game exit(Game gameToExit) {
+		Game game = Game.findById(gameToExit.id);
 		game.status = GameStatus.已终止;
-		return game.save();
+		game = game.save();
+		// db操作成功后 清除cache数据
+		Cache.safeDelete(GameCoreService.CACHE_KEY_GAME + game.roomNO);
+		return game;
 	}
 
 	public static Game start(Long id) {

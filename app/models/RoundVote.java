@@ -23,4 +23,8 @@ public class RoundVote extends BaseModel {
 
 	public int opposeNum;// 反对的人数
 
+	public static Long count(Round round) {
+		return Round.count("isDeleted = 0 and round = ? ", round);
+	}
+
 }
