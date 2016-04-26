@@ -80,12 +80,18 @@ public class Round extends BaseModel {
 
 	public static Round nextRound(Round currentRound) {
 		if (currentRound.roundIndex == 5)
-			return null;
+			return currentRound;
 
 		Round round = Round.fetchByGame(currentRound.game, currentRound.roundIndex + 1);
 		if (round != null)
 			Cache.add(GameCoreService.CACHE_KEY_GAMEROUND + currentRound.game.roomNO, round);
 		return round;
+	}
+
+	public static Round updateFailed(Round roundToUpdate) {
+		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
+		round.isSuccess = false;
+		return round.save();
 	}
 
 	public static Round update(Round roundToUpdate, boolean isSuccess) {

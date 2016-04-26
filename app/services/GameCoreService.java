@@ -289,10 +289,63 @@ public class GameCoreService {
 							textMessage.setContent("投票成功!本次组队成功，请选举出的人员执行任务！");
 							return MessageUtil.textMessageToXml(textMessage);
 						} else {
-							RoundVote.add(currentRound);
-							textMessage.setContent("投票成功!本次组队失败，" + rv.opposeNum + "人反对本次组队，请下位玩家挑选"
-									+ currentRound.actionPlayerNum + "位玩家组队，然后全体投票。");
-							return MessageUtil.textMessageToXml(textMessage);
+							Long count = RoundVote.count(currentRound);
+							if (count >= 3) {
+								currentRound = Round.updateFailed(currentRound);
+								currentRound = Round.nextRound(currentRound);
+								currentGame = Game.nextRound(currentRound);
+
+								if (currentGame.succNum != 3 && currentGame.failedNum != 3) {
+									StringBuffer sb = new StringBuffer();
+
+									sb.append("3次投票都失败，所以本回合失败了。");
+									sb.append("第" + currentGame.roundIndex + "回合开始，请下位玩家挑选"
+											+ currentRound.actionPlayerNum + "位玩家组队，然后全体投票。");
+									return MessageUtil.textMessageToXml(textMessage);
+								}
+								// 游戏结束，进入结算环节
+								else {
+									List<Round> roundList = Round.listByGame(currentGame);
+									boolean isSucc = currentGame.succNum == 3 ? true : false;
+									StringBuffer sb = new StringBuffer();
+									if (isSucc) {
+										sb.append("抵抗组织三轮任务成功，但是间谍仍然可由刺客暗杀梅林获取胜利！每回合详情如下\n");
+									} else {
+										sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。\n");
+									}
+
+									for (Round round : roundList) {
+										sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "执行任务\n");
+										if (round.isSuccess != null) {
+											sb.append("任务" + (round.isSuccess ? "成功" : "失败"));
+											if (round.failedNum == 0)
+												sb.append(",没有人破坏任务\n");
+											else
+												sb.append(round.failedNum + "人破坏任务\n");
+
+											List<Action> actions = Action.listByRound(round);
+											sb.append("成员为");
+											actions.forEach(row -> sb.append(row.player.name + " "));
+											sb.append("\n\n");
+										} else {
+											if (round.roundIndex == currentRound.roundIndex)
+												sb.append("任务进行中\n\n");
+											else
+												sb.append("任务未进行\n\n");
+										}
+									}
+
+									textMessage.setContent(sb.toString());
+									return MessageUtil.textMessageToXml(textMessage);
+								}
+
+							} else {
+								RoundVote.add(currentRound);
+								textMessage.setContent("投票成功!本次组队失败，" + rv.opposeNum + "人反对本次组队。这是本回合第" + count
+										+ "失败，如果3次投票失败，本回合自动失败。请下位玩家挑选" + currentRound.actionPlayerNum
+										+ "位玩家组队，然后全体投票。");
+								return MessageUtil.textMessageToXml(textMessage);
+							}
 						}
 
 					}
