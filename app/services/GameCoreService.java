@@ -9,12 +9,15 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 
+import models.Action;
 import models.Game;
 import models.Game.GameStatus;
 import models.Player;
 import models.PlayersInGame;
 import models.PlayersInGame.Role;
 import models.Round;
+import models.RoundVote;
+import models.Vote;
 import play.Logger;
 import play.cache.Cache;
 import play.mvc.Http.Request;
@@ -29,9 +32,14 @@ public class GameCoreService {
 
 	public static final String CACHE_KEY_PLAYER = "/player/";
 	public static final String CACHE_KEY_GAME = "/game/";
+	public static final String CACHE_KEY_GAMEROUND = "/game/round/";
 	public static final String EXIT_STR = "退出";
-	public static final String IDENTITY_STR = "身份";
-	public static final String MEMBER_STR = "成员";
+	public static final String IDENTITY_TEXT = "身份";
+	public static final String MEMBER_TEXT = "成员";
+	public static final String TASK_TEXT = "任务";
+	public static final String VOTE_TEXT = "投票";
+	public static final String SUCC_TEXT = "1";
+	public static final String FAIL_TEXT = "0";
 
 	/**
 	 * 
@@ -92,6 +100,8 @@ public class GameCoreService {
 				String currentGameRoomNO = (String) Cache.get(CACHE_KEY_PLAYER + fromUserName);
 				Game currentGame = currentGameRoomNO != null ? (Game) Cache.get(CACHE_KEY_GAME + currentGameRoomNO)
 						: null;
+				Round currentRound = currentGameRoomNO != null
+						? (Round) Cache.get(CACHE_KEY_GAMEROUND + currentGameRoomNO) : null;
 
 				// 退出房间
 				if (EXIT_STR.equals(content)) {
@@ -122,12 +132,14 @@ public class GameCoreService {
 							roomNO = getRoomNO();
 						}
 
+						// 初始化Game
 						Game game = Game.init(playerNum, roomNO);
 						if (game == null) {
 							textMessage.setContent("房间创建失败，请重试");
 							return MessageUtil.textMessageToXml(textMessage);
 						}
 
+						// 初始化五个Round
 						List<Round> rounds = Round.init(game);
 						if (rounds == null || rounds.size() != 5) {
 							Game.exit(game);
@@ -135,6 +147,7 @@ public class GameCoreService {
 							return MessageUtil.textMessageToXml(textMessage);
 						}
 
+						// 本人加入游戏
 						PlayersInGame pig = PlayersInGame.joinInGame(player, game);
 						if (pig == null) {
 							textMessage.setContent("房间" + roomNO + "创建成功，但是你加入房间失败");
@@ -163,7 +176,7 @@ public class GameCoreService {
 						return MessageUtil.textMessageToXml(textMessage);
 					}
 
-					if (game.status == GameStatus.进行中) {
+					if (game.status == GameStatus.执行 || game.status == GameStatus.投票) {
 						textMessage.setContent("房间已满，无法加入");
 						return MessageUtil.textMessageToXml(textMessage);
 					}
@@ -215,10 +228,14 @@ public class GameCoreService {
 										pig = item;
 								}
 
-								textMessage.setContent("游戏房间号：" + content + "你是最后一个加入房间的人，游戏开始啦！！！通知其他成员输入'身份'获取身份信息\n"
-										+ identityInfo(pigs, pig));
+								// 开局
+								Game.start(currentGame);
+								// 初始化第一局投票
+								RoundVote.add(currentRound);
+								textMessage.setContent("游戏房间号：" + content
+										+ "你是最后一个加入房间的人，游戏开始啦！！通知其他成员输入'身份'获取身份信息。请1号玩家挑选"
+										+ currentRound.actionPlayerNum + "位玩家进行组队，然后全体投票。\n" + identityInfo(pigs, pig));
 								return MessageUtil.textMessageToXml(textMessage);
-
 							}
 
 							textMessage.setContent(
@@ -229,8 +246,237 @@ public class GameCoreService {
 
 				}
 
+				// 投票 & 执行
+				if (SUCC_TEXT.equals(content) || FAIL_TEXT.equals(content)) {
+
+					// 未加入房间
+					if (StringUtils.isEmpty(currentGameRoomNO)) {
+						textMessage.setContent("都没加入游戏,玩毛");
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					GameStatus status = currentGame.status;
+
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						textMessage.setContent(
+								"游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum));
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					// 投票环节
+					if (status == GameStatus.投票) {
+						Vote vote = Vote.get(player, currentRound);
+						if (vote != null) {
+							textMessage.setContent("你已经投过票了，请回复[投票]查看结果。");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+
+						vote = Vote.add(player, currentRound, SUCC_TEXT.equals(content) ? true : false);
+						if (vote == null) {
+							textMessage.setContent("投票失败，我也不知道为什么，重试下。");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+
+						RoundVote rv = RoundVote.update(currentRound, SUCC_TEXT.equals(content) ? true : false);
+						if (rv.isSuccess == null) {
+							textMessage.setContent(
+									"投票成功!还有" + (currentGame.playerNum - rv.approveNum - rv.opposeNum) + "人还在墨迹。。。");
+							return MessageUtil.textMessageToXml(textMessage);
+						} else if (rv.isSuccess == true) {
+							Game.startAction(currentGame);
+							textMessage.setContent("投票成功!本次组队成功，请选举出的人员执行任务！");
+							return MessageUtil.textMessageToXml(textMessage);
+						} else {
+							RoundVote.add(currentRound);
+							textMessage.setContent("投票成功!本次组队失败，" + rv.opposeNum + "人反对本次组队，请下位玩家挑选"
+									+ currentRound.actionPlayerNum + "位玩家组队，然后全体投票。");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+
+					}
+					// 执行环节
+					else if (status == GameStatus.执行) {
+						// 重复执行判断
+						Action action = Action.get(player, currentRound);
+						if (action != null) {
+							textMessage.setContent("你已经行动过了，请回复[任务]查看结果。");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+						// 持久化执行记录
+						action = Action.add(player, currentRound, SUCC_TEXT.equals(content) ? true : false);
+						if (action == null) {
+							textMessage.setContent("执行失败，我也不知道为什么，重试下。");
+							return MessageUtil.textMessageToXml(textMessage);
+						}
+
+						currentRound = Round.update(currentRound, SUCC_TEXT.equals(content) ? true : false);
+						int failedNum = currentRound.failedNum;
+						Boolean isSuccess = currentRound.isSuccess;
+
+						if (isSuccess == null) {
+							textMessage.setContent("执行成功!还有"
+									+ (currentRound.actionPlayerNum - currentRound.failedNum - currentRound.succNum)
+									+ "人还在墨迹。。。");
+							return MessageUtil.textMessageToXml(textMessage);
+						} else {
+							currentRound = Round.nextRound(currentRound);
+							currentGame = Game.nextRound(currentRound);
+
+							if (currentGame.succNum != 3 && currentGame.failedNum != 3) {
+								StringBuffer sb = new StringBuffer();
+
+								if (isSuccess == true) {
+									sb.append("本回合成功!");
+									if (currentRound.failedNum == 0)
+										sb.append("没有人破坏任务。");
+									else
+										sb.append("不过有" + failedNum + "人破坏任务，可惜人数不够。");
+									sb.append("第" + currentGame.roundIndex + "回合开始，请下位玩家挑选"
+											+ currentRound.actionPlayerNum + "位玩家组队，然后全体投票。");
+									return MessageUtil.textMessageToXml(textMessage);
+								} else {
+									sb.append("本回合失败了。" + failedNum + "人破坏任务。");
+									sb.append("第" + currentGame.roundIndex + "回合开始，请下位玩家挑选"
+											+ currentRound.actionPlayerNum + "位玩家组队，然后全体投票。");
+									return MessageUtil.textMessageToXml(textMessage);
+								}
+							}
+							// 游戏结束，进入结算环节
+							else {
+								List<Round> roundList = Round.listByGame(currentGame);
+								boolean isSucc = currentGame.succNum == 3 ? true : false;
+								StringBuffer sb = new StringBuffer();
+								if (isSucc) {
+									sb.append("抵抗组织三轮任务成功，但是间谍仍然可由刺客暗杀梅林获取胜利！每回合详情如下\n");
+								} else {
+									sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。\n");
+								}
+
+								for (Round round : roundList) {
+									sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "执行任务\n");
+									if (round.isSuccess != null) {
+										sb.append("任务" + (round.isSuccess ? "成功" : "失败"));
+										if (round.failedNum == 0)
+											sb.append(",没有人破坏任务\n");
+										else
+											sb.append(round.failedNum + "人破坏任务\n");
+
+										List<Action> actions = Action.listByRound(round);
+										sb.append("成员为");
+										actions.forEach(row -> sb.append(row.player.name + " "));
+										sb.append("\n\n");
+									} else {
+										if (round.roundIndex == currentRound.roundIndex)
+											sb.append("任务进行中\n\n");
+										else
+											sb.append("任务未进行\n\n");
+									}
+								}
+
+								textMessage.setContent(sb.toString());
+								return MessageUtil.textMessageToXml(textMessage);
+							}
+
+						}
+
+					}
+				}
+
+				// 查看投票结果
+				if (VOTE_TEXT.equals(content)) {
+					// 未加入房间
+					if (StringUtils.isEmpty(currentGameRoomNO)) {
+						textMessage.setContent("你都没加入游戏，看个奶子投票！");
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					GameStatus status = currentGame.status;
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						textMessage.setContent(
+								"游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum));
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					StringBuffer sb = new StringBuffer();
+					List<RoundVote> roundVotes = RoundVote.list(currentRound);
+
+					if (status == GameStatus.投票)
+						sb.append("当前是第" + currentGame.roundIndex + "回合的投票。\n");
+					else if (status == GameStatus.执行)
+						sb.append("第" + currentGame.roundIndex + "回合的投票已结束，正在执行中。\n");
+
+					for (RoundVote rv : roundVotes) {
+						if (rv.isSuccess == null) {
+							sb.append("第" + rv.voteIndex + "轮投票正在进行中，已有" + rv.approveNum + "赞成，" + rv.opposeNum
+									+ "反对。\n");
+						} else {
+							sb.append("第" + rv.voteIndex + "轮投票" + (rv.isSuccess ? "成功。" : "失败。") + rv.approveNum
+									+ "人赞成，" + rv.opposeNum + "人反对。\n");
+						}
+					}
+
+					textMessage.setContent(sb.toString());
+					return MessageUtil.textMessageToXml(textMessage);
+				}
+
+				// 查看任务结果
+				if (TASK_TEXT.equals(content)) {
+					// 未加入房间
+					if (StringUtils.isEmpty(currentGameRoomNO)) {
+						textMessage.setContent("你都没加入游戏，看个奶子投票！");
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					GameStatus status = currentGame.status;
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						textMessage.setContent(
+								"游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum));
+						return MessageUtil.textMessageToXml(textMessage);
+					}
+
+					List<Round> roundList = Round.listByGame(currentGame);
+					StringBuffer sb = new StringBuffer();
+					sb.append("现在是第" + currentGame.roundIndex + "轮任务，需" + currentRound.actionPlayerNum + "组队执行任务，");
+
+					if (status == GameStatus.投票)
+						sb.append("目前是投票阶段，请输入[投票]查看投票详情。\n");
+					else if (status == GameStatus.执行)
+						sb.append("目前投票已经结束，请组队的人员执行任务，已经有" + (currentRound.succNum + currentRound.failedNum)
+								+ "人执行了任务。\n");
+
+					for (Round round : roundList) {
+						sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "执行任务\n");
+						if (round.isSuccess != null) {
+							sb.append("任务" + (round.isSuccess ? "成功" : "失败"));
+							if (round.failedNum == 0)
+								sb.append(",没有人破坏任务\n");
+							else
+								sb.append(round.failedNum + "人破坏任务\n");
+
+							List<Action> actions = Action.listByRound(round);
+							sb.append("成员为");
+							actions.forEach(row -> sb.append(row.player.name + " "));
+							sb.append("\n\n");
+						} else {
+							if (round.roundIndex == currentRound.roundIndex)
+								sb.append("任务进行中\n\n");
+							else
+								sb.append("任务未进行\n\n");
+						}
+					}
+
+					textMessage.setContent(sb.toString());
+					return MessageUtil.textMessageToXml(textMessage);
+				}
+
 				// 查看房间成员
-				if (MEMBER_STR.equals(content)) {
+				if (MEMBER_TEXT.equals(content)) {
 					// 未加入房间
 					if (StringUtils.isEmpty(currentGameRoomNO)) {
 						textMessage.setContent("你都没加入游戏，看个奶子成员！");
@@ -244,7 +490,7 @@ public class GameCoreService {
 				}
 
 				// 查看个人身份
-				if (IDENTITY_STR.equals(content)) {
+				if (IDENTITY_TEXT.equals(content)) {
 					// 未加入房间
 					if (StringUtils.isEmpty(currentGameRoomNO)) {
 						textMessage.setContent("你都没加入游戏，看个奶子身份！");
