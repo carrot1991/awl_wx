@@ -711,7 +711,7 @@ public class GameCoreService {
 			identityInfo.append("，好人阵型3次任务成功后，你可以挑选一名可能是梅林的玩家刺杀，如果选中，你们也算赢。");
 		}
 
-		identityInfo.append("\n" + configureInfo(pigs));
+		identityInfo.append("\n" + configureInfo(pig.game));
 		return identityInfo.toString();
 	}
 
