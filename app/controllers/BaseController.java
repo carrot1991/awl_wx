@@ -1,10 +1,13 @@
 package controllers;
 
-import cn.bran.play.JapidController;
+import org.apache.commons.lang.StringUtils;
+
+import play.mvc.Http.Header;
 import play.mvc.Http.Request;
 import play.mvc.Http.Response;
 import play.mvc.Scope.Session;
 import play.mvc.Util;
+import cn.bran.play.JapidController;
 
 public class BaseController extends JapidController {
 	/** 分页默认每页查询数量 **/
@@ -42,5 +45,15 @@ public class BaseController extends JapidController {
 	@Util
 	protected static void setAppTag() {
 		Response.current().setCookie(APP_TAG, Boolean.TRUE.toString());
+	}
+
+	@Util
+	protected static String getOpenId() {
+		final Header accessToken = Request.current().headers.get("openid");
+		if (accessToken == null || StringUtils.isBlank(accessToken.value())) {
+			return null;
+		} else {
+			return accessToken.value();
+		}
 	}
 }

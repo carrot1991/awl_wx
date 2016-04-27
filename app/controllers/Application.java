@@ -47,4 +47,8 @@ public class Application extends BaseController {
 		}
 	}
 
+	public static void test(String msg) {
+		renderText(GameCoreService.gameResponse(getOpenId(), msg));
+	}
+
 }
