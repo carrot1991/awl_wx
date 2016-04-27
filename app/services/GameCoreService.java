@@ -606,7 +606,7 @@ public class GameCoreService {
 		StringBuffer memberInfo = new StringBuffer("本房间内成员名单如下：\n");
 
 		pigs.forEach(row -> memberInfo.append(row.playerIndex + "号是" + row.player.name + "\n"));
-		memberInfo.append("\n" + configureInfo(pigs));
+		memberInfo.append("\n" + configureInfo(pigs.get(0).game));
 		return memberInfo.toString();
 	}
 
@@ -617,19 +617,19 @@ public class GameCoreService {
 	 * @CreateDate: 2016年4月22日
 	 * @return String 返回类型
 	 */
-	private static String configureInfo(List<PlayersInGame> pigs) {
+	private static String configureInfo(Game game) {
 		String configure = "\n房间的配置   ";
-		if (pigs.size() == 5)
+		if (game.playerNum == 5)
 			configure = "5人：梅林、派西维尔、忠臣*1  vs 莫甘娜、刺客";
-		else if (pigs.size() == 6)
+		else if (game.playerNum == 6)
 			configure = "6人：梅林、派西维尔、忠臣*2  vs 莫甘娜、刺客";
-		else if (pigs.size() == 7)
+		else if (game.playerNum == 7)
 			configure = "7人：梅林、派西维尔、忠臣*2  vs 莫甘娜、奥伯伦、刺客";
-		else if (pigs.size() == 8)
+		else if (game.playerNum == 8)
 			configure = "8人：梅林、派西维尔、忠臣*3  vs 莫甘娜、刺客、爪牙";
-		else if (pigs.size() == 9)
+		else if (game.playerNum == 9)
 			configure = "9人：梅林、派西维尔、忠臣*4  vs 莫德雷德、莫甘娜、刺客";
-		else if (pigs.size() == 10)
+		else if (game.playerNum == 10)
 			configure = "10人：梅林、派西维尔、忠臣*4  vs 莫德雷德、莫甘娜、奥伯伦、刺客";
 		return configure;
 	}
