@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
+
 import models.Action;
 import models.Game;
 import models.Game.GameStatus;
@@ -16,9 +18,6 @@ import models.PlayersInGame.Role;
 import models.Round;
 import models.RoundVote;
 import models.Vote;
-
-import org.apache.commons.lang.StringUtils;
-
 import play.Logger;
 import play.cache.Cache;
 import play.mvc.Http.Request;
@@ -127,12 +126,8 @@ public class GameCoreService {
 				if (currentGameRoomNO == null)
 					return "你又没在房间，退个奶子啊！";
 
-				if (Game.exit(currentGame) != null) {
-					PlayersInGame.listByGame(currentGame).forEach(
-							row -> Cache.safeDelete(GameCoreService.CACHE_KEY_PLAYER + row.player.openId));
-					return "已退出房间" + currentGame.roomNO + "，请先通知其他玩家";
-				} else
-					return "退出房间失败，请重试！";
+				exitGame(currentGameRoomNO, player.name + "跑路了！");
+				return "已退出房间" + currentGame.roomNO + "，请先通知其他玩家";
 			}
 
 			// 创建房间
@@ -153,8 +148,8 @@ public class GameCoreService {
 					// 初始化五个Round
 					List<Round> rounds = Round.init(game);
 					if (rounds == null || rounds.size() != 5) {
-						Game.exit(game);
-						return "房间创建失败，请重试";
+						exitGame(currentGameRoomNO, "回合创建失败");
+						return "回合创建失败，请重试";
 					}
 
 					// 本人加入游戏
@@ -184,9 +179,11 @@ public class GameCoreService {
 				if (game.status == GameStatus.已终止 || game.status == GameStatus.已结束)
 					return "游戏已结束，无法加入";
 
+				currentGame = game;
+
 				int playersNum = PlayersInGame.countByGame(currentGame);
 				if (playersNum < game.playerNum) {
-					PlayersInGame pig = PlayersInGame.joinInGame(player, game);
+					PlayersInGame pig = PlayersInGame.joinInGame(player, currentGame);
 					if (pig == null) {
 						return "加入房间失败，请重试";
 					} else {
@@ -226,7 +223,8 @@ public class GameCoreService {
 							}
 
 							// 开局
-							Game.start(currentGame);
+							currentGame = Game.start(currentGame);
+							currentRound = Round.fetchCurrentByGame(currentGame);
 							// 初始化第一局投票
 							RoundVote.add(currentRound);
 							return "游戏房间号：" + postMessage + "你是最后一个加入房间的人，游戏开始啦！！通知其他成员输入'身份'获取身份信息。请1号玩家挑选"
@@ -255,15 +253,16 @@ public class GameCoreService {
 
 				// 投票环节
 				if (status == GameStatus.投票) {
-					Vote vote = Vote.get(player, currentRound);
+					RoundVote rv = RoundVote.getCurrent(currentRound);
+					Vote vote = Vote.get(player, rv);
 					if (vote != null)
 						return "你已经投过票了，请回复[投票]查看结果。";
 
-					vote = Vote.add(player, currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
+					vote = Vote.add(player, rv, SUCC_TEXT.equals(postMessage) ? true : false);
 					if (vote == null)
 						return "投票失败，我也不知道为什么，重试下。";
 
-					RoundVote rv = RoundVote.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
+					rv = RoundVote.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
 					if (rv.isSuccess == null)
 						return "投票成功!还有" + (currentGame.playerNum - rv.approveNum - rv.opposeNum) + "人还在墨迹。。。";
 					else if (rv.isSuccess == true) {
@@ -273,10 +272,12 @@ public class GameCoreService {
 						Long count = RoundVote.count(currentRound);
 						if (count >= 3) {
 							currentRound = Round.updateFailed(currentRound);
-							currentRound = Round.nextRound(currentRound);
 							currentGame = Game.nextRound(currentRound);
+							currentRound = Round.nextRound(currentRound);
 
 							if (currentGame.succNum != 3 && currentGame.failedNum != 3) {
+								// 初始化下一局投票
+								RoundVote.add(currentRound);
 								StringBuffer sb = new StringBuffer();
 
 								sb.append("3次投票都失败，所以本回合失败了。");
@@ -316,6 +317,7 @@ public class GameCoreService {
 									}
 								}
 
+								exitGame(currentGameRoomNO, sb.toString());
 								return sb.toString();
 							}
 
@@ -334,6 +336,9 @@ public class GameCoreService {
 					if (action != null)
 						return "你已经行动过了，请回复[任务]查看结果。";
 
+					if (!SUCC_TEXT.equals(postMessage) && PlayersInGame.get(currentGame, player).role.isGoodMan())
+						return "你是好人，怎么能干坏事呢？请重新执行任务。";
+
 					// 持久化执行记录
 					action = Action.add(player, currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
 					if (action == null)
@@ -348,10 +353,12 @@ public class GameCoreService {
 								+ (currentRound.actionPlayerNum - currentRound.failedNum - currentRound.succNum)
 								+ "人还在墨迹。。。";
 					else {
-						currentRound = Round.nextRound(currentRound);
 						currentGame = Game.nextRound(currentRound);
+						currentRound = Round.nextRound(currentRound);
 
 						if (currentGame.succNum != 3 && currentGame.failedNum != 3) {
+							// 初始化下一局投票
+							RoundVote.add(currentRound);
 							StringBuffer sb = new StringBuffer();
 
 							if (isSuccess == true) {
@@ -378,7 +385,7 @@ public class GameCoreService {
 							if (isSucc) {
 								sb.append("抵抗组织三轮任务成功，但是间谍仍然可由刺客暗杀梅林获取胜利！每回合详情如下\n");
 							} else {
-								sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。\n");
+								sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。每回合详情如下\n");
 							}
 
 							for (Round round : roundList) {
@@ -402,6 +409,7 @@ public class GameCoreService {
 								}
 							}
 
+							exitGame(currentGameRoomNO, sb.toString());
 							return sb.toString();
 						}
 
@@ -458,12 +466,13 @@ public class GameCoreService {
 
 				List<Round> roundList = Round.listByGame(currentGame);
 				StringBuffer sb = new StringBuffer();
-				sb.append("现在是第" + currentGame.roundIndex + "轮任务，需" + currentRound.actionPlayerNum + "组队执行任务，");
+				sb.append("现在是第" + currentGame.roundIndex + "轮任务，需" + currentRound.actionPlayerNum + "人组队执行任务，");
 
 				if (status == GameStatus.投票)
 					sb.append("目前是投票阶段，请输入[投票]查看投票详情。\n");
 				else if (status == GameStatus.执行)
-					sb.append("目前投票已经结束，请组队的人员执行任务，已经有" + (currentRound.succNum + currentRound.failedNum) + "人执行了任务。\n");
+					sb.append(
+							"目前投票已经结束，请组队的人员执行任务，已经有" + (currentRound.succNum + currentRound.failedNum) + "人执行了任务。\n");
 
 				for (Round round : roundList) {
 					sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "执行任务\n");
@@ -524,8 +533,18 @@ public class GameCoreService {
 
 			return responseMessage;
 		} catch (Exception e) {
+			e.printStackTrace();
 			Logger.error("processRequest error:%s", e);
 			return "服务器异常:" + e.getMessage();
+		}
+	}
+
+	private static void exitGame(String RoomNO, String result) {
+		Game gameToExit = (Game) Cache.get(CACHE_KEY_GAME + RoomNO);
+		if (gameToExit != null) {
+			Game.exit(gameToExit, result);
+			PlayersInGame.listByGame(gameToExit)
+					.forEach(row -> Cache.safeDelete(GameCoreService.CACHE_KEY_PLAYER + row.player.openId));
 		}
 	}
 
@@ -600,13 +619,15 @@ public class GameCoreService {
 
 		if (role == Role.梅林) {
 			identityInfo.append("你知道");
-			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan())
-					.filter(row -> row.role != Role.莫德雷德).collect(Collectors.toList());
+			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan() && row.role != Role.莫德雷德)
+					.collect(Collectors.toList());
 			showPigs.forEach(row -> identityInfo.append(row.player.name + "，"));
 			identityInfo.deleteCharAt(identityInfo.lastIndexOf("，"));
-			identityInfo.append("都不是什么好鸟，不过你看不到莫德雷德这贱人");
+			identityInfo.append("都不是什么好鸟.");
+			if (pigs.stream().filter(row -> row.role == Role.莫德雷德).count() > 0)
+				identityInfo.append("不过你看不到莫德雷德这贱人.");
 		} else if (role == Role.亚瑟的忠臣) {
-			identityInfo.append("你只是个不明真相的好人");
+			identityInfo.append("你是个不明真相的好人");
 		} else if (role == Role.派西维尔) {
 			identityInfo.append("你知道");
 			List<PlayersInGame> showPigs = pigs.stream().filter(row -> row.role == Role.梅林 || row.role == Role.莫甘娜)
@@ -616,49 +637,46 @@ public class GameCoreService {
 			identityInfo.append("其中一人是抵抗组织的梅林，一人是贱碟的莫甘娜");
 		} else if (role == Role.莫德雷德) {
 			identityInfo.append("梅林看不到你，你知道");
-			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan())
-					.filter(row -> row.role != Role.莫德雷德).filter(row -> row.role != Role.奥伯伦)
+			List<PlayersInGame> showPigs = pigs.stream()
+					.filter(row -> !row.role.isGoodMan() && row.role != Role.奥伯伦 && row.id != pig.id)
 					.collect(Collectors.toList());
 			showPigs.forEach(row -> identityInfo.append(row.player.name + "，"));
 			identityInfo.deleteCharAt(identityInfo.lastIndexOf("，"));
-			identityInfo.append("跟你是一伙的");
-			if (pigs.size() == 7 || pigs.size() == 10) {
-				identityInfo.append("，奥伯伦也是跟你一伙的，不过你看不到他。");
-			}
+			identityInfo.append("跟你是一伙的.");
+			if (pigs.stream().filter(row -> row.role == Role.奥伯伦).count() > 0)
+				identityInfo.append("奥伯伦也是跟你一伙的，不过你看不到他。");
 		} else if (role == Role.莫甘娜) {
 			identityInfo.append("你知道");
-			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan())
-					.filter(row -> row.role != Role.奥伯伦).collect(Collectors.toList());
+			List<PlayersInGame> showPigs = pigs.stream()
+					.filter(row -> !row.role.isGoodMan() && row.role != Role.奥伯伦 && row.id != pig.id)
+					.collect(Collectors.toList());
 			showPigs.forEach(row -> identityInfo.append(row.player.name + "，"));
 			identityInfo.deleteCharAt(identityInfo.lastIndexOf("，"));
-			identityInfo.append("跟你是一伙的");
-			if (pigs.size() == 7 || pigs.size() == 10) {
-				identityInfo.append("，奥伯伦也是跟你一伙的，不过你看不到他");
-			}
-			identityInfo.append("，派西维尔这傻叉分不清你跟梅林。");
+			identityInfo.append("跟你是一伙的，派西维尔这傻叉分不清你跟梅林。");
+			if (pigs.stream().filter(row -> row.role == Role.奥伯伦).count() > 0)
+				identityInfo.append("奥伯伦也是跟你一伙的，不过你看不到他。");
 		} else if (role == Role.奥伯伦) {
 			identityInfo.append("傻叉，你的同伙看不到你，你也看不到他们。");
 		} else if (role == Role.莫德雷德的爪牙) {
 			identityInfo.append("你知道");
-			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan())
-					.filter(row -> row.role != Role.奥伯伦).collect(Collectors.toList());
+			List<PlayersInGame> showPigs = pigs.stream()
+					.filter(row -> !row.role.isGoodMan() && row.role != Role.奥伯伦 && row.id != pig.id)
+					.collect(Collectors.toList());
 			showPigs.forEach(row -> identityInfo.append(row.player.name + "，"));
 			identityInfo.deleteCharAt(identityInfo.lastIndexOf("，"));
-			identityInfo.append("跟你是一伙的");
-			if (pigs.size() == 7 || pigs.size() == 10) {
-				identityInfo.append("，奥伯伦也是跟你一伙的，不过你看不到他。");
-			}
+			identityInfo.append("跟你是一伙的.");
+			if (pigs.stream().filter(row -> row.role == Role.奥伯伦).count() > 0)
+				identityInfo.append("奥伯伦也是跟你一伙的，不过你看不到他。");
 		} else if (role == Role.刺客) {
 			identityInfo.append("你知道");
-			List<PlayersInGame> showPigs = pigs.stream().filter(row -> !row.role.isGoodMan())
-					.filter(row -> row.role != Role.奥伯伦).collect(Collectors.toList());
+			List<PlayersInGame> showPigs = pigs.stream()
+					.filter(row -> !row.role.isGoodMan() && row.role != Role.奥伯伦 && row.id != pig.id)
+					.collect(Collectors.toList());
 			showPigs.forEach(row -> identityInfo.append(row.player.name + "，"));
 			identityInfo.deleteCharAt(identityInfo.lastIndexOf("，"));
-			identityInfo.append("跟你是一伙的");
-			if (pigs.size() == 7 || pigs.size() == 10) {
-				identityInfo.append("，奥伯伦也是跟你一伙的，不过你看不到他");
-			}
-			identityInfo.append("，好人阵型3次任务成功后，你可以挑选一名可能是梅林的玩家刺杀，如果选中，你们也算赢。");
+			identityInfo.append("跟你是一伙的，好人阵型3次任务成功后，你可以挑选一名可能是梅林的玩家刺杀，如果选中，你们也算赢。");
+			if (pigs.stream().filter(row -> row.role == Role.奥伯伦).count() > 0)
+				identityInfo.append("奥伯伦也是跟你一伙的，不过你看不到他。");
 		}
 
 		identityInfo.append("\n" + configureInfo(pig.game));

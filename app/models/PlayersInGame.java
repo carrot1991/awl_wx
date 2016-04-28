@@ -67,6 +67,10 @@ public class PlayersInGame extends BaseModel {
 		return count.intValue();
 	}
 
+	public static PlayersInGame get(Game game, Player player) {
+		return PlayersInGame.find("game = ? and player = ?", game, player).first();
+	}
+
 	public void updateRole(Role role) {
 		this.role = role;
 		this.save();

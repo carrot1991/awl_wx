@@ -84,7 +84,7 @@ public class Round extends BaseModel {
 
 		Round round = Round.fetchByGame(currentRound.game, currentRound.roundIndex + 1);
 		if (round != null)
-			Cache.add(GameCoreService.CACHE_KEY_GAMEROUND + currentRound.game.roomNO, round);
+			Cache.set(GameCoreService.CACHE_KEY_GAMEROUND + currentRound.game.roomNO, round);
 		return round;
 	}
 
@@ -107,8 +107,8 @@ public class Round extends BaseModel {
 			round = Round.isSuccess(round);
 		}
 		// 将第一回合放入缓存
-		Cache.add(GameCoreService.CACHE_KEY_GAMEROUND + round.game.roomNO, round);
-		return roundToUpdate;
+		Cache.set(GameCoreService.CACHE_KEY_GAMEROUND + round.game.roomNO, round);
+		return round;
 	}
 
 	private static int getActionPlayerNum(int playerNum, int roundIndex) {

@@ -26,15 +26,19 @@ public class RoundVote extends BaseModel {
 	public int opposeNum;// 反对的人数
 
 	public static Long count(Round round) {
-		return Round.count("isDeleted = 0 and round = ? ", round);
+		return RoundVote.count("isDeleted = 0 and round = ? ", round);
 	}
 
 	public static List<RoundVote> list(Round round) {
-		return Round.find("isDeleted = 0 and round = ? ", round).fetch();
+		return RoundVote.find("isDeleted = 0 and round = ? ", round).fetch();
+	}
+
+	public static RoundVote getCurrent(Round round) {
+		return RoundVote.find("isDeleted = 0 and round = ? order by voteIndex desc", round).first();
 	}
 
 	public static RoundVote add(Round round) {
-		Long count = Round.count("isDeleted = 0 and round = ? ", round);
+		Long count = RoundVote.count("isDeleted = 0 and round = ? ", round);
 		RoundVote rv = new RoundVote();
 		rv.round = round;
 		rv.voteIndex = count.intValue() + 1;
@@ -43,7 +47,7 @@ public class RoundVote extends BaseModel {
 	}
 
 	public static RoundVote update(Round round, boolean isApprove) {
-		RoundVote rv = RoundVote.find("isDeleted = 0 and round = ? order by voteIndex desc", round).first();
+		RoundVote rv = getCurrent(round);
 		if (isApprove)
 			rv.approveNum = rv.approveNum + 1;
 		else

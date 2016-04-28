@@ -26,6 +26,8 @@ public class Game extends BaseModel {
 
 	public int failedNum;// 破坏任务的人数
 
+	public String result;
+
 	@Enumerated(EnumType.STRING)
 	public GameStatus status;// 游戏状态
 
@@ -51,12 +53,14 @@ public class Game extends BaseModel {
 		return game;
 	}
 
-	public static Game exit(Game gameToExit) {
+	public static Game exit(Game gameToExit, String result) {
 		Game game = Game.findById(gameToExit.id);
 		game.status = GameStatus.已终止;
+		game.result = result;
 		game = game.save();
 		// db操作成功后 清除cache数据
 		Cache.safeDelete(GameCoreService.CACHE_KEY_GAME + game.roomNO);
+		Cache.safeDelete(GameCoreService.CACHE_KEY_GAMEROUND + game.roomNO);
 		return game;
 	}
 
@@ -65,7 +69,7 @@ public class Game extends BaseModel {
 		game.status = GameStatus.投票;
 		game.roundIndex = 1;
 		game = game.save();
-		Cache.add(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
+		Cache.set(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
 		return game;
 	}
 
@@ -73,20 +77,21 @@ public class Game extends BaseModel {
 		Game game = Game.findById(gameToStart.id);
 		game.status = GameStatus.执行;
 		game = game.save();
-		Cache.add(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
+		Cache.set(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
 		return game;
 	}
 
 	public static Game nextRound(Round currentRound) {
 		Game game = Game.findById(currentRound.game.id);
 		if (game != null) {
-			game.roundIndex = currentRound.roundIndex;
+			game.roundIndex = currentRound.roundIndex + 1;
 			game.status = GameStatus.投票;
 			if (currentRound.isSuccess)
 				game.succNum = game.succNum + 1;
 			else
 				game.failedNum = game.failedNum + 1;
-			Cache.add(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
+			game = game.save();
+			Cache.set(GameCoreService.CACHE_KEY_GAME + game.roomNO, game);
 		}
 		return game;
 	}
