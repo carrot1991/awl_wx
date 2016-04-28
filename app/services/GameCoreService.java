@@ -620,17 +620,17 @@ public class GameCoreService {
 	private static String configureInfo(Game game) {
 		String configure = "\n房间的配置   ";
 		if (game.playerNum == 5)
-			configure += "5人：梅林、派西维尔、忠臣*1  vs 莫甘娜、刺客";
+			configure += "5人：梅林、派西维尔、忠臣*1 vs 莫甘娜、刺客";
 		else if (game.playerNum == 6)
-			configure += "6人：梅林、派西维尔、忠臣*2  vs 莫甘娜、刺客";
+			configure += "6人：梅林、派西维尔、忠臣*2 vs 莫甘娜、刺客";
 		else if (game.playerNum == 7)
-			configure += "7人：梅林、派西维尔、忠臣*2  vs 莫甘娜、奥伯伦、刺客";
+			configure += "7人：梅林、派西维尔、忠臣*2 vs 莫甘娜、奥伯伦、刺客";
 		else if (game.playerNum == 8)
-			configure += "8人：梅林、派西维尔、忠臣*3  vs 莫甘娜、刺客、爪牙";
+			configure += "8人：梅林、派西维尔、忠臣*3 vs 莫甘娜、刺客、爪牙";
 		else if (game.playerNum == 9)
-			configure += "9人：梅林、派西维尔、忠臣*4  vs 莫德雷德、莫甘娜、刺客";
+			configure += "9人：梅林、派西维尔、忠臣*4 vs 莫德雷德、莫甘娜、刺客";
 		else if (game.playerNum == 10)
-			configure += "10人：梅林、派西维尔、忠臣*4  vs 莫德雷德、莫甘娜、奥伯伦、刺客";
+			configure += "10人：梅林、派西维尔、忠臣*4 vs 莫德雷德、莫甘娜、奥伯伦、刺客";
 		return configure;
 	}
 
