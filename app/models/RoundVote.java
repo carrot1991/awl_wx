@@ -5,6 +5,8 @@ import java.util.List;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * 
  * @Description:回合的投票环节
@@ -23,7 +25,11 @@ public class RoundVote extends BaseModel {
 
 	public int approveNum;// 赞成的人数
 
+	public String approveName;// 赞成的玩家
+
 	public int opposeNum;// 反对的人数
+
+	public String opposeName; // 反对的玩家
 
 	public static Long count(Round round) {
 		return RoundVote.count("isDeleted = 0 and round = ? ", round);
@@ -46,12 +52,16 @@ public class RoundVote extends BaseModel {
 		return rv;
 	}
 
-	public static RoundVote update(Round round, boolean isApprove) {
+	public static RoundVote update(Round round, Player player, boolean isApprove) {
 		RoundVote rv = getCurrent(round);
-		if (isApprove)
+		if (isApprove) {
 			rv.approveNum = rv.approveNum + 1;
-		else
+			rv.approveName = StringUtils.isBlank(rv.approveName) ? player.name + " "
+					: rv.approveName + player.name + " ";
+		} else {
 			rv.opposeNum = rv.opposeNum + 1;
+			rv.opposeName = StringUtils.isBlank(rv.opposeName) ? player.name + " " : rv.opposeName + player.name + " ";
+		}
 
 		if (round.game.playerNum == rv.approveNum + rv.opposeNum) {
 			if (rv.approveNum > rv.opposeNum)

@@ -68,8 +68,9 @@ public class Round extends BaseModel {
 		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
 		if (round != null && round.actionPlayerNum == round.succNum + round.failedNum) {
 			if (round.failedNum == 0
-					|| (round.failedNum == 1 && round.actionPlayerNum == 4 && round.game.playerNum == 7)
-					|| (round.failedNum == 1 && round.actionPlayerNum == 5))
+					|| (round.failedNum == 1 && round.actionPlayerNum == 4 && round.game.playerNum == 7
+							&& round.game.roundIndex == 4)
+					|| (round.failedNum == 1 && round.actionPlayerNum == 5 && round.game.roundIndex == 4))
 				round.isSuccess = true;
 			else
 				round.isSuccess = false;
@@ -88,12 +89,6 @@ public class Round extends BaseModel {
 		return round;
 	}
 
-	public static Round updateFailed(Round roundToUpdate) {
-		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
-		round.isSuccess = false;
-		return round.save();
-	}
-
 	public static Round update(Round roundToUpdate, boolean isSuccess) {
 		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
 		if (isSuccess)
@@ -106,7 +101,7 @@ public class Round extends BaseModel {
 		if (round.actionPlayerNum == round.succNum + round.failedNum) {
 			round = Round.isSuccess(round);
 		}
-		// 将第一回合放入缓存
+		// 将回合放入缓存
 		Cache.set(GameCoreService.CACHE_KEY_GAMEROUND + round.game.roomNO, round);
 		return round;
 	}

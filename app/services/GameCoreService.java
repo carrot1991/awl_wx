@@ -244,168 +244,163 @@ public class GameCoreService {
 			}
 
 			if (StringUtils.isBlank(currentRoomNO)) {
-				return "你不在游戏房间，请先加入游戏或创建。";
-			}
+				if ((postMessage.equals(EXIT_STR) || postMessage.equals(FAIL_TEXT) || postMessage.equals(SUCC_TEXT)
+						|| postMessage.equals(VOTE_TEXT) || postMessage.equals(TASK_TEXT)
+						|| postMessage.equals(MEMBER_TEXT) || postMessage.equals(IDENTITY_TEXT)))
+					return "你不在游戏房间，请先加入游戏或创建。";
+			} else {
+				GameStatus status = currentGame.status;
+				List<PlayersInGame> pigs;
 
-			GameStatus status = currentGame.status;
-			List<PlayersInGame> pigs;
-
-			switch (postMessage) {
-			// 退出房间
-			case EXIT_STR:
-				exitGame(currentRoomNO, player.name + "跑路了！");
-				responseMessage = "已退出房间" + currentGame.roomNO + "，请先通知其他玩家。";
-				break;
-			// 执行 || 投票
-			case SUCC_TEXT:
-			case FAIL_TEXT:
-				switch (status) {
-				case 已终止:
-				case 已结束:
-					responseMessage = "游戏已经结束。";
+				switch (postMessage) {
+				// 退出房间
+				case EXIT_STR:
+					exitGame(currentRoomNO, player.name + "跑路了！");
+					responseMessage = "已退出房间" + currentGame.roomNO + "，请先通知其他玩家。";
 					break;
-				case 未开始:
-					responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
-							+ (currentGame.playerNum - PlayersInGame.countByGame(currentGame));
-					break;
-				case 投票:
-					RoundVote rv = RoundVote.getCurrent(currentRound);
-					Vote vote = Vote.get(player, rv);
-					if (vote == null) {
-						// 新增投票记录
-						vote = Vote.add(player, rv, SUCC_TEXT.equals(postMessage) ? true : false);
-						// 更新本轮投票结果
-						rv = RoundVote.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
-						if (rv.isSuccess == null) {
-							responseMessage = "投票成功!还有" + (currentGame.playerNum - rv.approveNum - rv.opposeNum)
-									+ "人还在墨迹。。。";
-						} else if (rv.isSuccess) {
-							// 更新Game记录，开始进入执行阶段
-							Game.startAction(currentGame);
-							responseMessage = "投票成功!本次组队成功，请选举出的人员执行任务！";
-						} else {
-							// 本回合的投票次数
-							Long count = RoundVote.count(currentRound);
-							// 如果本回合投票失败三次
-							if (count >= 3) {
-								// 本回合置为失败
-								currentRound = Round.updateFailed(currentRound);
-								// 移动至下个回合
-								responseMessage = nextRound(currentRound, currentGame);
-							} else {
-								// 初始化下一轮投票
-								RoundVote.add(currentRound);
-								responseMessage = "投票成功!本次组队失败，" + rv.opposeNum + "人反对本次组队。这是本回合第" + count
-										+ "失败，如果3次投票失败，本回合自动失败。请下位玩家挑选" + currentRound.actionPlayerNum
-										+ "位玩家组队，然后全体投票。";
-							}
-						}
-					} else {
-						responseMessage = "你已经投过票了，请回复[投票]查看结果。";
-					}
-					break;
-				case 执行:
-					// 重复执行判断
-					Action action = Action.get(player, currentRound);
-					if (action == null) {
-						if (!SUCC_TEXT.equals(postMessage) && PlayersInGame.get(currentGame, player).role.isGoodMan()) {
-							responseMessage = "你是好人，怎么能干坏事呢？请重新执行任务。";
-						} else {
-							// 持久化执行记录
-							action = Action.add(player, currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
-							// 更新当前Round记录
-							currentRound = Round.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
-							Boolean isSuccess = currentRound.isSuccess;
-							if (isSuccess == null) {
-								responseMessage = "执行成功!还有"
-										+ (currentRound.actionPlayerNum - currentRound.failedNum - currentRound.succNum)
+				// 执行 || 投票
+				case SUCC_TEXT:
+				case FAIL_TEXT:
+					switch (status) {
+					case 已终止:
+					case 已结束:
+						responseMessage = "游戏已经结束。";
+						break;
+					case 未开始:
+						responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
+								+ (currentGame.playerNum - PlayersInGame.countByGame(currentGame));
+						break;
+					case 投票:
+						RoundVote rv = RoundVote.getCurrent(currentRound);
+						Vote vote = Vote.get(player, rv);
+						if (vote == null) {
+							// 新增投票记录
+							vote = Vote.add(player, rv, SUCC_TEXT.equals(postMessage) ? true : false);
+							// 更新本轮投票结果
+							rv = RoundVote.update(currentRound, player, SUCC_TEXT.equals(postMessage) ? true : false);
+							if (rv.isSuccess == null) {
+								responseMessage = "投票成功!还有" + (currentGame.playerNum - rv.approveNum - rv.opposeNum)
 										+ "人还在墨迹。。。";
+							} else if (rv.isSuccess) {
+								// 更新Game记录，开始进入执行阶段
+								Game.startAction(currentGame);
+								responseMessage = "本次组队成功，请选举出的人员执行任务！";
 							} else {
-								currentGame = Game.nextRound(currentRound);
-								currentRound = Round.nextRound(currentRound);
+								// 本回合的投票次数
+								Long count = RoundVote.count(currentRound);
+								// 如果本回合投票失败四次后
+								if (count >= 4) {
+									// 更新Game记录，开始进入执行阶段
+									Game.startAction(currentGame);
+									responseMessage = rv.opposeName + "反对本次组队，下位玩家选择" + currentRound.actionPlayerNum
+											+ "位玩家组队无需投票，可直接执行任务。";
+								} else {
+									// 初始化下一轮投票
+									RoundVote.add(currentRound);
+									responseMessage = "本次组队失败，" + rv.opposeName + "反对本次组队。这是本回合第" + count
+											+ "失败，如果4轮投票失败，第5轮选择后直接执行。请下位玩家选择" + currentRound.actionPlayerNum
+											+ "位玩家组队，然后全体投票。";
+								}
+							}
+						} else {
+							responseMessage = "你已经投过票了，请回复[投票]查看结果。";
+						}
+						break;
+					case 执行:
+						// 重复执行判断
+						Action action = Action.get(player, currentRound);
+						if (action == null) {
+							if (!SUCC_TEXT.equals(postMessage)
+									&& PlayersInGame.get(currentGame, player).role.isGoodMan()) {
+								responseMessage = "你是好人，怎么能干坏事呢？请重新执行任务。";
+							} else {
+								// 持久化执行记录
+								action = Action.add(player, currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
+								// 更新当前Round记录
+								currentRound = Round.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
+								Boolean isSuccess = currentRound.isSuccess;
+								if (isSuccess == null) {
+									responseMessage = "执行成功!还有" + (currentRound.actionPlayerNum - currentRound.failedNum
+											- currentRound.succNum) + "人还在墨迹。。。";
+								} else {
+									// 移动至下个回合
+									responseMessage = nextRound(currentRound, currentGame);
+								}
+							}
+						} else {
+							responseMessage = "你已经行动过了，请回复[任务]查看结果。";
+						}
+						break;
+					default:
+						break;
+					}
+					break;
+				// 查看投票结果
+				case VOTE_TEXT:
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
+								+ (currentGame.playerNum - playersNum);
+					} else {
+						StringBuffer sb = new StringBuffer();
+						List<RoundVote> roundVotes = RoundVote.list(currentRound);
+
+						if (status == GameStatus.投票)
+							sb.append("当前是第" + currentGame.roundIndex + "回合的投票。\n");
+						else if (status == GameStatus.执行)
+							sb.append("第" + currentGame.roundIndex + "回合的投票已结束，正在执行中。\n");
+
+						for (RoundVote rv : roundVotes) {
+							if (rv.isSuccess == null) {
+								sb.append("第" + rv.voteIndex + "轮投票正在进行中，" + rv.approveName + "赞成，" + rv.opposeName
+										+ "反对。\n");
+							} else {
+								sb.append("第" + rv.voteIndex + "轮投票" + (rv.isSuccess ? "成功。" : "失败。") + rv.approveName
+										+ "人赞成，" + rv.opposeName + "人反对。\n");
 							}
 						}
+						responseMessage = sb.toString();
+					}
+					break;
+				// 查看任务
+				case TASK_TEXT:
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
+								+ (currentGame.playerNum - playersNum);
 					} else {
-						responseMessage = "你已经行动过了，请回复[任务]查看结果。";
+						List<Round> roundList = Round.listByGame(currentGame);
+						return roundsInfo(roundList);
 					}
 
-					currentRound = Round.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
-					Boolean isSuccess = currentRound.isSuccess;
-
-					if (isSuccess == null) {
-						responseMessage = "执行成功!还有"
-								+ (currentRound.actionPlayerNum - currentRound.failedNum - currentRound.succNum)
-								+ "人还在墨迹。。。";
+					break;
+				// 查看成员
+				case MEMBER_TEXT:
+					// 获取玩家列表
+					pigs = PlayersInGame.listByGame(currentGame);
+					responseMessage = memberInfo(pigs);
+					break;
+				// 查看个人身份
+				case IDENTITY_TEXT:
+					// 已加入房间,但是人还没满
+					if (status == GameStatus.未开始) {
+						int playersNum = PlayersInGame.countByGame(currentGame);
+						responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
+								+ (currentGame.playerNum - playersNum);
 					} else {
-						// 移动至下个回合
-						responseMessage = nextRound(currentRound, currentGame);
+						// 获取玩家列表
+						pigs = PlayersInGame.listByGame(currentGame);
+						// 获取个人身份
+						PlayersInGame pig = pigs.stream().filter(row -> row.player.openId.equals(openid)).findFirst()
+								.get();
+						responseMessage = identityInfo(pigs, pig);
 					}
 					break;
 				default:
 					break;
 				}
-				break;
-			// 查看投票结果
-			case VOTE_TEXT:
-				// 已加入房间,但是人还没满
-				if (status == GameStatus.未开始) {
-					int playersNum = PlayersInGame.countByGame(currentGame);
-					responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum);
-				} else {
-					StringBuffer sb = new StringBuffer();
-					List<RoundVote> roundVotes = RoundVote.list(currentRound);
-
-					if (status == GameStatus.投票)
-						sb.append("当前是第" + currentGame.roundIndex + "回合的投票。\n");
-					else if (status == GameStatus.执行)
-						sb.append("第" + currentGame.roundIndex + "回合的投票已结束，正在执行中。\n");
-
-					for (RoundVote rv : roundVotes) {
-						if (rv.isSuccess == null) {
-							sb.append("第" + rv.voteIndex + "轮投票正在进行中，已有" + rv.approveNum + "赞成，" + rv.opposeNum
-									+ "反对。\n");
-						} else {
-							sb.append("第" + rv.voteIndex + "轮投票" + (rv.isSuccess ? "成功。" : "失败。") + rv.approveNum
-									+ "人赞成，" + rv.opposeNum + "人反对。\n");
-						}
-					}
-					responseMessage = sb.toString();
-				}
-				break;
-			// 查看任务
-			case TASK_TEXT:
-				// 已加入房间,但是人还没满
-				if (status == GameStatus.未开始) {
-					int playersNum = PlayersInGame.countByGame(currentGame);
-					responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum);
-				} else {
-					List<Round> roundList = Round.listByGame(currentGame);
-					return roundsInfo(roundList);
-				}
-
-				break;
-			// 查看成员
-			case MEMBER_TEXT:
-				// 获取玩家列表
-				pigs = PlayersInGame.listByGame(currentGame);
-				responseMessage = memberInfo(pigs);
-				break;
-			// 查看个人身份
-			case IDENTITY_TEXT:
-				// 已加入房间,但是人还没满
-				if (status == GameStatus.未开始) {
-					int playersNum = PlayersInGame.countByGame(currentGame);
-					responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺" + (currentGame.playerNum - playersNum);
-				} else {
-					// 获取玩家列表
-					pigs = PlayersInGame.listByGame(currentGame);
-					// 获取个人身份
-					PlayersInGame pig = pigs.stream().filter(row -> row.player.openId.equals(openid)).findFirst().get();
-					responseMessage = identityInfo(pigs, pig);
-				}
-				break;
-			default:
-				break;
 			}
 
 			return responseMessage;
