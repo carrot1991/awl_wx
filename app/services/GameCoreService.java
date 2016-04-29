@@ -87,6 +87,14 @@ public class GameCoreService {
 			if (msgType.equals(MessageUtil.REQ_MESSAGE_TYPE_TEXT)) {
 				textMessage.setContent(gameResponse(fromUserName, requestMap.get("Content")));
 				return MessageUtil.textMessageToXml(textMessage);
+			} else if (msgType.equals(MessageUtil.REQ_MESSAGE_TYPE_EVENT)) {
+				// 事件类型
+				String eventType = requestMap.get("Event");
+				// 订阅
+				if (eventType.equals(MessageUtil.EVENT_TYPE_SUBSCRIBE)) {
+					textMessage.setContent("没时间解释了，快上车！！！\n\n" + DEFAULT_TEXT);
+					return MessageUtil.textMessageToXml(textMessage);
+				}
 			}
 		} catch (Exception e) {
 			Logger.error("processRequest error:%s", e);
