@@ -68,8 +68,7 @@ public class Round extends BaseModel {
 		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
 		if (round != null && round.actionPlayerNum == round.succNum + round.failedNum) {
 			if (round.failedNum == 0
-					|| (round.failedNum == 1 && round.actionPlayerNum == 4 && round.game.playerNum == 7
-							&& round.game.roundIndex == 4)
+					|| (round.failedNum == 1 && round.game.playerNum == 7 && round.game.roundIndex == 4)
 					|| (round.failedNum == 1 && round.actionPlayerNum == 5 && round.game.roundIndex == 4))
 				round.isSuccess = true;
 			else

@@ -3,9 +3,12 @@ package models;
 import java.util.List;
 
 import javax.persistence.Entity;
+import javax.persistence.LockModeType;
 import javax.persistence.ManyToOne;
 
 import org.apache.commons.lang.StringUtils;
+
+import play.db.jpa.JPA;
 
 /**
  * 
@@ -54,6 +57,7 @@ public class RoundVote extends BaseModel {
 
 	public static RoundVote update(Round round, Player player, boolean isApprove) {
 		RoundVote rv = getCurrent(round);
+		JPA.em().lock(rv, LockModeType.WRITE);
 		if (isApprove) {
 			rv.approveNum = rv.approveNum + 1;
 			rv.approveName = StringUtils.isBlank(rv.approveName) ? player.name + " "
@@ -69,7 +73,9 @@ public class RoundVote extends BaseModel {
 			else
 				rv.isSuccess = false;
 		}
-		return rv.save();
+		rv = rv.save();
+
+		return rv;
 	}
 
 }

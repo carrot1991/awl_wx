@@ -43,13 +43,13 @@ public class GameCoreService {
 	public static final String FAIL_TEXT = "0";
 	public static final String NAME_TEXT = "我是";
 	public static final String ROLE_TEXT = "规则";
-	public static final String DEFAULT_TEXT = "1.开始游戏前请先回复[" + NAME_TEXT + "您的名字]取名(所有指令均无中括号)\n"
-			+ "2.输入人数5~10的其中一个数字，建立相应人数的房间，得到房间代码\n" + "3.建立房间后，输入 [成员] ，查看房间内当前成员、编号以及身份配置\n"
-			+ "4.人满后，输入 [身份] ，得到该局每人身份；新手玩家输入身份名称可得到相关讲解\n" + "5.确定队伍组成后,输入[" + SUCC_TEXT + "]和[" + FAIL_TEXT
-			+ "]开始投票，[" + SUCC_TEXT + "]代表投票成功，[" + FAIL_TEXT + "]代表投票失败。其他玩家可输入[" + VOTE_TEXT + "]查看投票现状\n"
+	public static final String DEFAULT_TEXT = "1.开始游戏前请先回复[" + NAME_TEXT + "您的名字]取名(所有指令均无中括号)\n\n"
+			+ "2.输入人数5~10的其中一个数字，建立相应人数的房间，得到房间代码\n\n" + "3.建立房间后，输入 [成员] ，查看房间内当前成员、编号以及身份配置\n\n"
+			+ "4.人满后，输入 [身份] ，得到该局每人身份；新手玩家输入身份名称可得到相关讲解\n\n" + "5.确定队伍组成后,输入[" + SUCC_TEXT + "]和[" + FAIL_TEXT
+			+ "]开始投票，[" + SUCC_TEXT + "]代表投票成功，[" + FAIL_TEXT + "]代表投票失败。其他玩家可输入[" + VOTE_TEXT + "]查看投票现状\n\n"
 			+ "6.组队成功后,输入[" + SUCC_TEXT + "]和[" + FAIL_TEXT + "]开始任务，[" + SUCC_TEXT + "]代表投票任务，[" + FAIL_TEXT
-			+ "]代表任务失败。其他玩家可输入[" + TASK_TEXT + "]查看任务现状\n" + "7.游戏结束后任意玩家输入[" + EXIT_STR + "]，所有玩家退出房间\n" + "8.输入["
-			+ ROLE_TEXT + "]了解阿瓦隆的玩法\n";
+			+ "]代表任务失败。其他玩家可输入[" + TASK_TEXT + "]查看任务现状\n\n" + "7.游戏结束后任意玩家输入[" + EXIT_STR + "]，所有玩家退出房间\n\n" + "8.输入["
+			+ ROLE_TEXT + "]了解阿瓦隆的玩法\n\n";
 
 	/**
 	 * 
@@ -188,58 +188,52 @@ public class GameCoreService {
 
 				currentGame = game;
 
-				int playersNum = PlayersInGame.countByGame(currentGame);
-				if (playersNum < game.playerNum) {
-					PlayersInGame pig = PlayersInGame.joinInGame(player, currentGame);
-					if (pig == null) {
-						return "加入房间失败，请重试";
-					} else {
-						playersNum = PlayersInGame.countByGame(currentGame);
+				PlayersInGame pig = PlayersInGame.joinInGame(player, currentGame);
+				if (pig == null) {
+					return "加入房间失败，请重试";
+				} else {
+					// 人满开车！！！！！
+					if (pig.playerIndex == currentGame.playerNum) {
+						// 获取玩家列表
+						List<PlayersInGame> pigs = PlayersInGame.listByGame(currentGame);
+						// 乱序玩家列表
+						Collections.shuffle(pigs);
 
-						// 人满开车！！！！！
-						if (playersNum == currentGame.playerNum) {
-							// 获取玩家列表
-							List<PlayersInGame> pigs = PlayersInGame.listByGame(currentGame);
-							// 乱序玩家列表
-							Collections.shuffle(pigs);
+						// 分配角色
+						for (int i = 0; i < pigs.size(); i++) {
+							PlayersInGame item = pigs.get(i);
 
-							// 分配角色
-							for (int i = 0; i < pigs.size(); i++) {
-								PlayersInGame item = pigs.get(i);
-
-								if (i == 0) {
-									item.updateRole(Role.梅林);
-								} else if (i == 1) {
-									item.updateRole(Role.派西维尔);
-								} else if (i == 2) {
-									item.updateRole(Role.莫甘娜);
-								} else if (i == 3) {
-									item.updateRole(Role.刺客);
-								} else if (i == 4 || i == 5 || i == 7 || i == 8) {
-									item.updateRole(Role.亚瑟的忠臣);
-								} else if ((i == 6 && (pigs.size() == 7 || pigs.size() == 10)) || i == 10) {
-									item.updateRole(Role.奥伯伦);
-								} else if (i == 6 && pigs.size() == 8) {
-									item.updateRole(Role.莫德雷德的爪牙);
-								} else if (i == 6 && (pigs.size() == 9 || pigs.size() == 10)) {
-									item.updateRole(Role.莫德雷德);
-								}
-
-								if (item.id == pig.id)
-									pig = item;
+							if (i == 0) {
+								item.updateRole(Role.梅林);
+							} else if (i == 1) {
+								item.updateRole(Role.派西维尔);
+							} else if (i == 2) {
+								item.updateRole(Role.莫甘娜);
+							} else if (i == 3) {
+								item.updateRole(Role.刺客);
+							} else if (i == 4 || i == 5 || i == 7 || i == 8) {
+								item.updateRole(Role.亚瑟的忠臣);
+							} else if ((i == 6 && (pigs.size() == 7 || pigs.size() == 10)) || i == 10) {
+								item.updateRole(Role.奥伯伦);
+							} else if (i == 6 && pigs.size() == 8) {
+								item.updateRole(Role.莫德雷德的爪牙);
+							} else if (i == 6 && (pigs.size() == 9 || pigs.size() == 10)) {
+								item.updateRole(Role.莫德雷德);
 							}
 
-							// 开局
-							currentGame = Game.start(currentGame);
-							currentRound = Round.fetchCurrentByGame(currentGame);
-							// 初始化第一局投票
-							RoundVote.add(currentRound);
-							return "游戏房间号：" + postMessage + "你是最后一个加入房间的人，游戏开始啦！！通知其他成员输入'身份'获取身份信息。请1号玩家挑选"
-									+ currentRound.actionPlayerNum + "位玩家进行组队，然后全体投票。\n" + identityInfo(pigs, pig);
-						} else
-							return "游戏房间号：" + postMessage + "\n游戏人数：" + game.playerNum + "\n你是：" + pig.playerIndex
-									+ "号";
-					}
+							if (item.id == pig.id)
+								pig = item;
+						}
+
+						// 开局
+						currentGame = Game.start(currentGame);
+						currentRound = Round.fetchCurrentByGame(currentGame);
+						// 初始化第一局投票
+						RoundVote.add(currentRound);
+						return "游戏房间号：" + postMessage + "你是最后一个加入房间的人，游戏开始啦！！通知其他成员输入'身份'获取身份信息。请1号玩家挑选"
+								+ currentRound.actionPlayerNum + "位玩家进行组队，然后全体投票。\n" + identityInfo(pigs, pig);
+					} else
+						return "游戏房间号：" + postMessage + "\n游戏人数：" + game.playerNum + "\n你是：" + pig.playerIndex + "号";
 				}
 			}
 
@@ -284,7 +278,11 @@ public class GameCoreService {
 							} else if (rv.isSuccess) {
 								// 更新Game记录，开始进入执行阶段
 								Game.startAction(currentGame);
-								responseMessage = "本次组队成功，请选举出的人员执行任务！";
+								if ((currentGame.playerNum == 7 && currentGame.roundIndex == 4)
+										|| (currentRound.actionPlayerNum == 5 && currentGame.roundIndex == 4)) {
+									responseMessage = "本次组队成功，请选举出的人员执行任务！注意：本回合需要出现两个任务失败才判定为失败";
+								} else
+									responseMessage = "本次组队成功，请选举出的人员执行任务！";
 							} else {
 								// 本回合的投票次数
 								Long count = RoundVote.count(currentRound);
@@ -298,8 +296,7 @@ public class GameCoreService {
 									// 初始化下一轮投票
 									RoundVote.add(currentRound);
 									responseMessage = "本次组队失败，" + rv.opposeName + "反对本次组队。这是本回合第" + count
-											+ "失败，如果4轮投票失败，第5轮选择后直接执行。请下位玩家选择" + currentRound.actionPlayerNum
-											+ "位玩家组队，然后全体投票。";
+											+ "失败，如果4轮投票失败，第5轮选择后直接执行。";
 								}
 							}
 						} else {
@@ -340,7 +337,7 @@ public class GameCoreService {
 					// 已加入房间,但是人还没满
 					if (status == GameStatus.未开始) {
 						int playersNum = PlayersInGame.countByGame(currentGame);
-						responseMessage = "游戏还没开始，" + currentGame.playerNum + "缺"
+						responseMessage = "房间号：" + currentRoomNO + "，游戏还没开始，" + currentGame.playerNum + "缺"
 								+ (currentGame.playerNum - playersNum);
 					} else {
 						StringBuffer sb = new StringBuffer();
@@ -460,7 +457,7 @@ public class GameCoreService {
 	private static String roundsInfo(List<Round> roundList) {
 		StringBuffer sb = new StringBuffer();
 		for (Round round : roundList) {
-			sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "执行任务\n");
+			sb.append("第" + round.roundIndex + "轮任务共" + round.actionPlayerNum + "人执行任务\n");
 			if (round.isSuccess != null) {
 				sb.append("任务" + (round.isSuccess ? "成功" : "失败"));
 				if (round.failedNum == 0)
@@ -473,10 +470,7 @@ public class GameCoreService {
 				actions.forEach(row -> sb.append(row.player.name + " "));
 				sb.append("\n\n");
 			} else {
-				if (round.roundIndex == round.game.roundIndex)
-					sb.append("任务进行中\n\n");
-				else
-					sb.append("任务未进行\n\n");
+				sb.append("任务未进行\n\n");
 			}
 		}
 		return sb.toString();
@@ -516,9 +510,9 @@ public class GameCoreService {
 			boolean isSucc = game.succNum == 3 ? true : false;
 			StringBuffer sb = new StringBuffer();
 			if (isSucc) {
-				sb.append("抵抗组织三轮任务成功，但是间谍仍然可由刺客暗杀梅林获取胜利！每回合详情如下\n");
+				sb.append("抵抗组织三轮任务成功，但是间谍仍然可由刺客暗杀梅林获取胜利！每回合详情如下\n\n");
 			} else {
-				sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。每回合详情如下\n");
+				sb.append("本局游戏间谍获胜，愚蠢的抵抗组织。。。。。每回合详情如下\n\n");
 			}
 
 			sb.append(roundsInfo(roundList));

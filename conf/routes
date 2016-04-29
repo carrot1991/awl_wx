@@ -5,6 +5,7 @@
 # Home page
 GET     /                                       Application.index
 *    	/wx										Application.wx
+POST    /test									Application.test
 
 # Ignore favicon requests
 GET     /favicon.ico                            404
