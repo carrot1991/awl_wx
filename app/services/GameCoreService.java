@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.StringUtils;
-
 import models.Action;
 import models.Game;
 import models.Game.GameStatus;
@@ -19,6 +17,9 @@ import models.PlayersInGame.Role;
 import models.Round;
 import models.RoundVote;
 import models.Vote;
+
+import org.apache.commons.lang.StringUtils;
+
 import play.Logger;
 import play.cache.Cache;
 import play.mvc.Http.Request;
@@ -33,6 +34,7 @@ public class GameCoreService {
 
 	public static final String CACHE_KEY_PLAYER = "/player/";
 	public static final String CACHE_KEY_GAME = "/game/";
+	public static final String CACHE_KEY_GAMEPLAYERNUM = "/game/playerNum/";
 	public static final String CACHE_KEY_GAMEROUND = "/game/round/";
 	public static final String EXIT_STR = "退出";
 	public static final String IDENTITY_TEXT = "身份";
@@ -159,12 +161,16 @@ public class GameCoreService {
 						return "回合创建失败，请重试";
 					}
 
+					// 房间人数计数器
+					Cache.add(CACHE_KEY_GAMEPLAYERNUM + game.roomNO, 0l);
+
 					// 本人加入游戏
 					PlayersInGame pig = PlayersInGame.joinInGame(player, game);
 					if (pig == null)
 						return "房间" + roomNO + "创建成功，但是你加入房间失败";
-					else
+					else {
 						return "游戏房间号：" + roomNO + "\n游戏人数：" + playerNum + "\n你是：" + pig.playerIndex + "号";
+					}
 
 				} else {
 					return "您已经在房间" + currentRoomNO + "内了";
@@ -187,6 +193,10 @@ public class GameCoreService {
 					return "游戏已结束，无法加入";
 
 				currentGame = game;
+
+				Long playerNum = (Long) Cache.get(CACHE_KEY_GAMEPLAYERNUM + game.roomNO);
+				if (playerNum == game.playerNum)
+					return "房间已满，你来晚啦";
 
 				PlayersInGame pig = PlayersInGame.joinInGame(player, currentGame);
 				if (pig == null) {
@@ -317,8 +327,9 @@ public class GameCoreService {
 								currentRound = Round.update(currentRound, SUCC_TEXT.equals(postMessage) ? true : false);
 								Boolean isSuccess = currentRound.isSuccess;
 								if (isSuccess == null) {
-									responseMessage = "执行成功!还有" + (currentRound.actionPlayerNum - currentRound.failedNum
-											- currentRound.succNum) + "人还在墨迹。。。";
+									responseMessage = "执行成功!还有"
+											+ (currentRound.actionPlayerNum - currentRound.failedNum - currentRound.succNum)
+											+ "人还在墨迹。。。";
 								} else {
 									// 移动至下个回合
 									responseMessage = nextRound(currentRound, currentGame);
@@ -419,8 +430,8 @@ public class GameCoreService {
 		Game gameToExit = (Game) Cache.get(CACHE_KEY_GAME + RoomNO);
 		if (gameToExit != null) {
 			Game.exit(gameToExit, result);
-			PlayersInGame.listByGame(gameToExit)
-					.forEach(row -> Cache.safeDelete(GameCoreService.CACHE_KEY_PLAYER + row.player.openId));
+			PlayersInGame.listByGame(gameToExit).forEach(
+					row -> Cache.safeDelete(GameCoreService.CACHE_KEY_PLAYER + row.player.openId));
 		}
 	}
 

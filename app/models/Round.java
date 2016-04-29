@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.Entity;
+import javax.persistence.LockModeType;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import play.cache.Cache;
+import play.db.jpa.JPA;
 import services.GameCoreService;
 
 @Entity
@@ -90,6 +92,7 @@ public class Round extends BaseModel {
 
 	public static Round update(Round roundToUpdate, boolean isSuccess) {
 		Round round = Round.find("isDeleted = 0 and id = ?", roundToUpdate.id).first();
+		JPA.em().lock(round, LockModeType.WRITE);
 		if (isSuccess)
 			round.succNum = round.succNum + 1;
 		else

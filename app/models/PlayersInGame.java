@@ -49,11 +49,13 @@ public class PlayersInGame extends BaseModel {
 		PlayersInGame pig = new PlayersInGame();
 		pig.game = game;
 		pig.player = player;
-		pig.playerIndex = count.intValue() + 1;
+		pig.playerIndex = ((Long) Cache.get(GameCoreService.CACHE_KEY_GAMEPLAYERNUM + game.roomNO)).intValue() + 1;
 		pig = pig.save();
 
-		if (pig != null)
+		if (pig != null) {
 			Cache.add(GameCoreService.CACHE_KEY_PLAYER + player.openId, game.roomNO);
+			Cache.incr(GameCoreService.CACHE_KEY_GAMEPLAYERNUM + game.roomNO);
+		}
 
 		return pig;
 	}

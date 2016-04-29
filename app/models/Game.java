@@ -3,8 +3,10 @@ package models;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.LockModeType;
 
 import play.cache.Cache;
+import play.db.jpa.JPA;
 import services.GameCoreService;
 
 /**
@@ -61,6 +63,7 @@ public class Game extends BaseModel {
 		// db操作成功后 清除cache数据
 		Cache.safeDelete(GameCoreService.CACHE_KEY_GAME + game.roomNO);
 		Cache.safeDelete(GameCoreService.CACHE_KEY_GAMEROUND + game.roomNO);
+		Cache.safeDelete(GameCoreService.CACHE_KEY_GAMEPLAYERNUM + game.roomNO);
 		return game;
 	}
 
@@ -84,6 +87,7 @@ public class Game extends BaseModel {
 	public static Game nextRound(Round currentRound) {
 		Game game = Game.findById(currentRound.game.id);
 		if (game != null) {
+			JPA.em().lock(game, LockModeType.WRITE);
 			game.roundIndex = currentRound.roundIndex + 1;
 			game.status = GameStatus.投票;
 			if (currentRound.isSuccess)
